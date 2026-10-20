@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buds 4 feature validation</title>
+<link rel="stylesheet" href="/validation.css">
+<main>
+<p class="eyebrow">BUDS 4 · READ-ONLY VALIDATION</p>
+<h1>A deeper connection check.</h1>
+<p>This reads your current sound, gesture and connection settings. It then listens for battery,
+wearing and noise events, and reconnects once. No setting changes, sounds or tests are sent.</p>
+<button id="start">Select Buds 4 and start</button>
+<button id="stop" disabled>Disconnect</button>
+<p id="status" role="status">Keep the earbuds connected to your Mac.</p>
+<section><h2>Current device state</h2><pre id="state">Waiting for a connection.</pre></section>
+<details><summary>Validation events</summary><pre id="log"></pre></details>
+</main>
+<script type="module" src="/validation.js"></script>
+</html>

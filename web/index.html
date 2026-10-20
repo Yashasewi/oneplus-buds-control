@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#efeee9">
+<title>Buds — OnePlus Buds 4</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="shell">
+  <header>
+    <a class="brand" href="/" aria-label="Buds home"><span class="brand-mark">b.</span> buds<span class="brand-label">FOR YOUR EVERYDAY SOUND</span></a>
+    <div class="header-actions"><span id="connection" class="connection"><i></i> Not connected</span>
+      <button id="connect" class="button primary">Connect earbuds <span aria-hidden="true">↗</span></button>
+      <button id="disconnect" class="button subtle" hidden>Disconnect</button>
+    </div>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="device-title">
+      <div class="hero-copy">
+        <div class="overline"><span class="small-cross">+</span> YOUR EARPHONES, IN VIEW</div>
+        <h1 id="device-title">OnePlus<br>Buds 4<span class="orange">.</span></h1>
+        <p id="hero-description">A clear view of your sound.<br>Connect to see what your earbuds are doing.</p>
+        <div class="device-meta"><span><i id="live-dot"></i><span id="device-status">Ready when you are</span></span><span id="firmware">Firmware —</span></div>
+      </div>
+      <div class="earbuds-art" aria-hidden="true">
+        <span class="art-orbit orbit-one"></span><span class="art-orbit orbit-two"></span>
+        <svg viewBox="0 0 480 370">
+          <defs>
+            <linearGradient id="stem" x1="0" x2="1"><stop stop-color="#292d2f"/><stop offset=".35" stop-color="#686e6e"/><stop offset=".65" stop-color="#3c4243"/><stop offset="1" stop-color="#171b1c"/></linearGradient>
+            <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6f7777"/><stop offset=".4" stop-color="#343a3c"/><stop offset="1" stop-color="#1a1f20"/></linearGradient>
+            <linearGradient id="case" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#525b58"/><stop offset=".45" stop-color="#343d39"/><stop offset="1" stop-color="#222b27"/></linearGradient>
+            <radialGradient id="shadow"><stop stop-color="#a9aaa3" stop-opacity=".45"/><stop offset="1" stop-color="#a9aaa3" stop-opacity="0"/></radialGradient>
+          </defs>
+          <ellipse cx="248" cy="315" rx="170" ry="25" fill="url(#shadow)"/>
+          <g transform="translate(100 28) rotate(-22 90 95)">
+            <rect x="99" y="78" width="34" height="150" rx="17" fill="url(#stem)"/>
+            <path d="M46 67C45 25 112 22 132 57C150 89 123 115 94 114C61 116 47 99 46 67Z" fill="url(#body)"/>
+            <ellipse cx="48" cy="65" rx="27" ry="31" fill="#343a3b" transform="rotate(-18 48 65)"/>
+            <ellipse cx="45" cy="65" rx="17" ry="23" fill="#121718"/>
+            <ellipse cx="45" cy="64" rx="9" ry="15" fill="#090e0f"/>
+            <rect x="112" y="130" width="5" height="52" rx="2.5" fill="#adb4af" opacity=".25"/>
+            <ellipse cx="114" cy="212" rx="3" ry="2" fill="#090d0e"/>
+            <path d="M79 44Q114 39 124 70" fill="none" stroke="#9ba5a2" stroke-width="2" opacity=".35"/>
+          </g>
+          <g transform="translate(250 15) rotate(25 85 100)">
+            <rect x="74" y="79" width="35" height="147" rx="17" fill="url(#stem)"/>
+            <path d="M80 40C108 23 153 47 153 77C153 108 124 120 97 110C64 100 60 59 80 40Z" fill="url(#body)"/>
+            <ellipse cx="147" cy="73" rx="25" ry="30" fill="#3b4142" transform="rotate(18 147 73)"/>
+            <ellipse cx="151" cy="73" rx="15" ry="21" fill="#14191a"/>
+            <ellipse cx="152" cy="73" rx="8" ry="14" fill="#090e0f"/>
+            <rect x="88" y="130" width="5" height="51" rx="2.5" fill="#adb4af" opacity=".24"/>
+            <ellipse cx="91" cy="212" rx="3" ry="2" fill="#0a0e0f"/>
+            <path d="M91 43Q126 37 136 54" fill="none" stroke="#9ba5a2" stroke-width="2" opacity=".4"/>
+          </g>
+          <g transform="translate(148 225)">
+            <path d="M2 40C1 14 23 2 49 0H164C192 2 214 17 214 43V57C213 88 187 103 161 106H51C22 103 2 86 2 58Z" fill="url(#case)"/>
+            <path d="M3 43Q109 54 214 43" fill="none" stroke="#181e1b" stroke-width="2"/>
+            <path d="M20 20Q112 -8 194 23" fill="none" stroke="#929c96" stroke-opacity=".22"/>
+            <rect x="102" y="63" width="10" height="2.5" rx="1.25" fill="#b6c3a8"/>
+            <text x="108" y="84" text-anchor="middle" font-size="7" fill="#aeb6af" letter-spacing="1.4">ONEPLUS</text>
+          </g>
+        </svg>
+        <span class="art-caption"><span class="small-cross">+</span> LESS NOISE. MORE YOU.</span>
+      </div>
+    </section>
+
+    <section class="battery-section" aria-label="Battery levels">
+      <div class="battery-item"><div class="battery-icon">L</div><div><p>Left earbud</p><strong id="battery-left">—<small>%</small></strong><span id="wear-left" class="battery-note">Not checked</span></div><div id="meter-left" class="meter"><i></i></div></div>
+      <div class="battery-item"><div class="battery-icon">R</div><div><p>Right earbud</p><strong id="battery-right">—<small>%</small></strong><span id="wear-right" class="battery-note">Not checked</span></div><div id="meter-right" class="meter"><i></i></div></div>
+      <div class="battery-item case-battery"><div class="battery-icon case-icon" aria-hidden="true">▱</div><div><p>Charging case</p><strong id="battery-case">—<small>%</small></strong><span id="wear-case" class="battery-note">Open the case to check</span></div><div id="meter-case" class="meter"><i></i></div></div>
+    </section>
+
+    <div class="section-heading"><div><span class="overline">THE DETAILS</span><h2>Your sound, at a glance.</h2></div>
+      <button id="refresh" class="button outline" disabled><span aria-hidden="true">↻</span> Refresh state</button></div>
+    <p id="message" role="status" class="status-message">Select your already paired Buds 4 in Chrome to get started.</p>
+    <div class="cards">
+      <section class="card noise-card"><div class="card-heading"><h3>Noise control</h3><span class="line-icon" aria-hidden="true">≋</span></div>
+        <div class="mode-grid" id="noise-modes"><span data-mode="Off">Off</span><span data-mode="Noise cancellation">Noise cancelling</span><span data-mode="Transparency">Transparency</span><span data-mode="Adaptive">Adaptive</span></div>
+        <div class="card-foot"><span>Current mode</span><strong id="noise-value">Not checked</strong></div>
+      </section>
+      <section class="card"><div class="card-heading"><h3>Sound profile</h3><span class="line-icon" aria-hidden="true">∿</span></div>
+        <div class="equalizer-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="card-foot"><span>Equalizer</span><strong id="eq-value">Not checked</strong></div>
+        <div class="card-foot"><span>BassWave</span><strong id="bass-value">Not checked</strong></div>
+        <div id="preset-list" class="preset-list"></div>
+      </section>
+      <section class="card"><div class="card-heading"><h3>Listening features</h3><span class="line-icon" aria-hidden="true">⌁</span></div>
+        <div id="features" class="feature-list"><p class="empty">Your available features appear here after connecting.</p></div>
+      </section>
+      <section class="card gesture-card"><div class="card-heading"><h3>Touch controls</h3><span class="line-icon" aria-hidden="true">↥</span></div>
+        <div class="ear-tabs" role="group" aria-label="Gesture ear"><button class="ear-tab selected" data-ear="Left" aria-pressed="true">Left earbud</button><button class="ear-tab" data-ear="Right" aria-pressed="false">Right earbud</button></div>
+        <div id="gestures" class="gesture-list"><p class="empty">Connect to read your current gestures.</p></div>
+      </section>
+      <section class="card"><div class="card-heading"><h3>Your connections</h3><span class="line-icon" aria-hidden="true">⤯</span></div>
+        <div class="card-foot"><span>Dual connection</span><strong id="dual-value">Not checked</strong></div>
+        <div id="devices" class="device-list"><p class="empty">Connected devices appear here.</p></div>
+      </section>
+      <section class="card info-card"><div class="card-heading"><h3>About your earbuds</h3><span class="line-icon" aria-hidden="true">↗</span></div>
+        <div class="card-foot"><span>Model</span><strong>OnePlus Buds 4</strong></div>
+        <div class="card-foot"><span>Firmware</span><strong id="firmware-info">Not checked</strong></div>
+        <div class="card-foot"><span>Audio codec</span><strong id="codec-value">Not checked</strong></div>
+        <div class="card-foot"><span>Prompt volume</span><strong id="volume-value">Not checked</strong></div>
+      </section>
+    </div>
+    <footer><span><span class="footer-dot"></span> First version · read-only</span><span id="updated">No device data read yet</span>
+      <details><summary>Connection help</summary><p>Use Google Chrome on this Mac. Pair your earbuds in macOS first, then select them with Connect earbuds. This version reads current settings; changing settings and running tests are not enabled. Missing values mean the device did not provide them.</p></details>
+    </footer>
+  </main>
+</div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
