@@ -60,13 +60,13 @@ Start at login, auto-connect, a global shortcut for the noise cycle, low-battery
 
 ## Track 2: web app on Vite+
 
-1. Scaffold with Vite+ (`vp`) using React and TypeScript, plus Tailwind. Keep the dev server on `127.0.0.1:8974`, since Chrome's granted serial port is tied to that origin.
+1. Scaffold with Vite+ (`vp`) using React and TypeScript, plus Tailwind. Keep the dev server on a fixed origin (`localhost:5173`, strict port), since Chrome's granted serial port is tied to it.
 2. Move `protocol.js` and `device.js` to `src/lib/` as TypeScript without changing behaviour. Type the state (`DeviceState`) and command builders.
 3. Expose the session through a `useBuds()` hook with an external store (`useSyncExternalStore`) that publishes immutable snapshots.
 4. Rebuild the UI as components with a new design: a fixed "now" panel (sound field, noise control, battery) and a grouped settings list (Sound, Touch controls, Features, Connections, Tools, About). Each row shows its own pending, confirmed or error state.
 5. Connect automatically to the already-granted port on load and when the buds come back; re-read settings when the tab regains focus.
 
-Status: done in `app/` (`vp dev` serves it on `127.0.0.1:8974`); the old `web/` dashboard has been removed.
+Status: done in `app/` (`vp dev` serves it on `localhost:5173`); the old `web/` dashboard was removed after commit `212478a`.
 
 The web app stays Chrome-only (Web Serial over Bluetooth). Cursor's and other Electron browsers expose the API but do not offer a device chooser.
 

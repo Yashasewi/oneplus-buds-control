@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 // Chrome ties the granted Bluetooth serial port to this origin; keep it fixed.
-const server = { host: "127.0.0.1", port: 8974, strictPort: true };
+const server = { port: 5173, strictPort: true };
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
