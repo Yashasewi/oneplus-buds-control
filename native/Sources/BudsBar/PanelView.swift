@@ -4,6 +4,7 @@ import SwiftUI
 
 struct PanelView: View {
   let session: BudsSession
+  @Environment(\.openWindow) private var openWindow
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
@@ -61,6 +62,11 @@ struct PanelView: View {
         Button("Connect") { Task { await session.connect() } }
       }
       Spacer()
+      Button("Settings…") {
+        openWindow(id: "settings")
+        NSApp.activate()
+      }
+      .keyboardShortcut(",")
       Button("Quit") { NSApplication.shared.terminate(nil) }
     }
     .buttonStyle(.borderless)

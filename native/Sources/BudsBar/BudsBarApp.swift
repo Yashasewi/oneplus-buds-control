@@ -21,6 +21,11 @@ struct BudsBarApp: App {
       MenuBarLabel(session: session)
     }
     .menuBarExtraStyle(.window)
+
+    Window("OnePlus Buds", id: "settings") {
+      SettingsView(session: session)
+    }
+    .windowResizability(.contentMinSize)
   }
 }
 

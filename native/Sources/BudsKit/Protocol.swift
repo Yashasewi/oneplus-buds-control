@@ -105,13 +105,31 @@ func decodeSmartLevel(_ p: Bytes) throws -> NoiseMode? {
 // MARK: Allowlist and framing
 
 // Every command and payload shape this client may send. Writes outside it are rejected before encoding.
+// Firmware/OTA, resets, pairing, ear scans, cloud features and anything undocumented for Buds 4 are absent.
 private let allowed: [UInt16: @Sendable (Bytes) -> Bool] = [
-  0x0100: \.isEmpty, 0x0103: \.isEmpty, 0x0105: \.isEmpty, 0x0106: \.isEmpty, 0x0109: \.isEmpty,
-  0x010F: \.isEmpty, 0x0122: \.isEmpty, 0x0200: \.isEmpty,
+  0x0100: \.isEmpty, 0x0103: \.isEmpty, 0x0105: \.isEmpty, 0x0106: \.isEmpty, 0x0108: \.isEmpty, 0x0109: \.isEmpty,
+  0x010F: \.isEmpty, 0x0112: \.isEmpty, 0x0114: \.isEmpty, 0x0115: \.isEmpty, 0x0122: \.isEmpty, 0x0124: \.isEmpty,
+  0x0130: \.isEmpty, 0x0200: \.isEmpty,
   0x010C: { $0.count == 2 && [1, 2, 4].contains($0[0]) && $0[1] == 1 },
-  0x0205: { p in p.count >= 2 && Int(p[0]) == p.count - 1 && p.dropFirst().allSatisfy { [1, 2, 3, 4, 8].contains($0) } },
-  0x0404: { p in NoiseMode.allCases.contains { noisePayload($0) == p } },
+  0x010D: { $0.count > 1 && Int($0[0]) == $0.count - 1 },
+  0x0116: { $0.count == 41 && $0[0] == 12 && validHearingInfo(Array($0[1..<37])) },
+  0x0205: { p in
+    p.count >= 2 && Int(p[0]) == p.count - 1 && p.dropFirst().allSatisfy { [1, 2, 3, 4, 8].contains($0) }
+      && Set(p.dropFirst()).count == p.count - 1
+  },
+  0x0400: { $0 == [0] || $0 == [1] },
+  0x0401: validGestureTable,
+  0x0403: { $0.count == 2 && Switch.allIDs.contains($0[0]) && $0[1] <= 1 },
+  0x0404: { p in NoiseMode.allCases.contains { noisePayload($0) == p } || validHoldCycle(p) },
+  0x0405: { $0 == [0] || $0 == [1] },
   0x0406: { $0.count == 1 && $0[0] <= 15 },
+  0x040D: { $0 == [2, 0] || $0 == [2, 1] },
+  0x040E: { $0 == [4] || validTone($0) || validRecord($0) },
+  0x0411: { $0.count == 5 && Array($0[0..<4]) == [1, 1, 1, 0] && $0[4] > 0 },
+  0x0413: { $0 == [8, 0, 0] || $0 == [8, 0, 1] },
+  0x0418: validCustomEq,
+  0x041B: { $0.count == 3 && $0[0] == 0xFB && $0[1] == 5 && abs(signed($0[2])) <= 5 },
+  0x0427: { $0.count == 1 && (1...10).contains($0[0]) },
   0x8500: { $0.count == 5 && $0[0] == 0 },
 ]
 
@@ -182,11 +200,20 @@ func acknowledged(_ command: UInt16, _ p: Bytes) throws {
 
 // MARK: Capabilities
 
-// Bit n of the 0x8100 bitmap enables these commands (QuickBuds BIT_COMMANDS), trimmed to what this app sends.
-private let bitCommands: [Int: [UInt16]] = [
-  0: [0x0105], 1: [0x0106], 4: [0x0109], 8: [0x010C, 0x0404], 10: [0x0406, 0x010F], 22: [0x0205], 34: [0x0122],
+// Bit n of the 0x8100 bitmap enables these commands (QuickBuds desktop/src/protocol.rs BIT_COMMANDS).
+private let bitCommands: [[UInt16]] = [
+  [0x0105], [0x0106], [0x0107], [0x0108, 0x0401, 0x0416], [0x0109], [0x0400], [0x0402], [0x0403],
+  [0x010C, 0x0404], [0x0405], [0x0406, 0x010F], [0x0407], [], [0x0408], [0x0409], [], [],
+  [0x0114], [], [0x040E, 0x040D, 0x0115, 0x0116], [0x040F], [0x0410, 0x0119], [0x0205], [0x0F00],
+  [], [0x0118, 0x0411], [0x011A, 0x0412], [0x011C, 0x0413], [], [0x0112, 0x040B],
+  [0x011E, 0x011F, 0x0415], [0x040D], [], [0x0121, 0x0417], [0x0122, 0x0418], [],
+  [0x011D, 0x0414], [0x0123, 0x041A], [0x0124, 0x041B], [0x0125, 0x041C, 0x0127, 0x041D, 0x041F],
+  [0x0421, 0x0023, 0x0024, 0x0022, 0x0126, 0x0129], [0xEF01], [0xEF02], [0xEF03, 0x041E], [0x0420],
+  [0x001C], [], [0x0422, 0x012A], [0xEF04], [0x0423, 0x012B], [], [0x0424], [0xEF06], [], [],
+  [0x0425, 0x012E, 0x0426], [0x012F], [0x0427, 0x0130], [0x0131, 0x0428], [0x0429, 0x0132], [0x0014],
+  [0x042D, 0x0133], [0x042E], [0xEF07], [0xEF08], [0xEF09], [0x0431, 0x0134],
 ]
-private let always: Set<UInt16> = [0x0100, 0x0103, 0x0106, 0x0200]
+private let always: Set<UInt16> = [0x0100, 0x0101, 0x0102, 0x0103, 0x0104, 0x0106, 0x010B, 0x010D, 0x0200, 0x0F00, 0x0F03, 0x0F04]
 
 public struct Capabilities: Sendable {
   let offered: Set<UInt16>
@@ -196,7 +223,7 @@ public struct Capabilities: Sendable {
 func decodeCapabilities(_ p: Bytes) throws -> Capabilities {
   try requireSuccess(p, 2)
   var offered = always
-  for (bit, commands) in bitCommands where bit < (p.count - 1) * 8 && (p[1 + bit >> 3] >> (bit & 7)) & 1 == 1 {
+  for (bit, commands) in bitCommands.enumerated() where bit < (p.count - 1) * 8 && (p[1 + bit >> 3] >> (bit & 7)) & 1 == 1 {
     offered.formUnion(commands)
   }
   return Capabilities(offered: offered)
@@ -281,9 +308,18 @@ func decodeByte(_ p: Bytes) throws -> Int {
   return Int(p[1])
 }
 
+public struct Band: Equatable, Sendable {
+  public let frequency: Int
+  public var gain: Int
+  public init(frequency: Int, gain: Int) { self.frequency = frequency; self.gain = gain }
+}
+
 public struct Preset: Identifiable, Equatable, Sendable {
   public let id: Int
-  public let name: String
+  public var name: String
+  public var bands: [Band]
+  public var isCustom: Bool { !bands.isEmpty }
+  public init(id: Int, name: String, bands: [Band] = []) { self.id = id; self.name = name; self.bands = bands }
   public static let builtIn = [Preset(id: 0, name: "Balanced"), Preset(id: 1, name: "Serenade"), Preset(id: 2, name: "Bass")]
 }
 
@@ -298,10 +334,14 @@ func decodeCustomPresets(_ p: Bytes) throws -> [Preset] {
     guard cursor + nameLength + 1 <= p.count else { throw BudsError.unrecognized("truncated preset name") }
     let name = String(decoding: p[cursor..<(cursor + nameLength)], as: UTF8.self)
     cursor += nameLength
-    let bands = Int(p[cursor])
-    cursor += 1 + bands * 3
-    guard cursor <= p.count else { throw BudsError.unrecognized("truncated preset bands") }
-    result.append(Preset(id: id, name: name))
+    let count = Int(p[cursor])
+    cursor += 1
+    guard count <= 16, cursor + count * 3 <= p.count else { throw BudsError.unrecognized("truncated preset bands") }
+    let bands = (0..<count).map { i in
+      Band(frequency: Int(p[cursor + i * 3]) | Int(p[cursor + i * 3 + 1]) << 8, gain: signed(p[cursor + i * 3 + 2]))
+    }
+    cursor += count * 3
+    result.append(Preset(id: id, name: name, bands: bands))
   }
   guard cursor == p.count else { throw BudsError.unrecognized("preset suffix") }
   return result
