@@ -150,7 +150,7 @@ final class ConnectCard {
     let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
     panel.isOpaque = false
     panel.backgroundColor = .clear
-    panel.hasShadow = true
+    panel.hasShadow = false
     panel.level = .statusBar
     panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
     panel.isReleasedWhenClosed = false
@@ -163,30 +163,25 @@ struct ConnectCardView: View {
   let close: () -> Void
 
   var body: some View {
-    VStack(spacing: 14) {
+    VStack(spacing: 16) {
       HStack(spacing: 10) {
-        Image(systemName: "earbuds")
-          .font(.system(size: 18, weight: .medium))
-          .frame(width: 36, height: 36)
-          .background(Circle().fill(Color.accentColor.opacity(0.18)))
-          .foregroundStyle(Color.accentColor)
         VStack(alignment: .leading, spacing: 1) {
           Text("OnePlus Buds 4").font(.headline)
-          Text("Connected").font(.caption).foregroundStyle(.secondary)
+          Text("Connected").font(.callout).foregroundStyle(.secondary)
         }
         Spacer()
-        Button(action: close) {
-          Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
-            .frame(width: 20, height: 20).background(Circle().fill(Color.primary.opacity(0.08)))
-        }
-        .buttonStyle(.plain)
+        Button("Close", systemImage: "xmark", action: close)
+          .labelStyle(.iconOnly)
+          .buttonStyle(.glass)
+          .buttonBorderShape(.circle)
+          .controlSize(.small)
       }
       BatteryRow(session: session)
     }
+    .padding(18)
+    .frame(width: 310)
+    .glassEffect(.regular, in: .rect(cornerRadius: 26))
     .padding(16)
-    .frame(width: 300)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.primary.opacity(0.08)))
     .onTapGesture(perform: close)
   }
 }

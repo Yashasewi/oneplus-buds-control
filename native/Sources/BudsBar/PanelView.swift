@@ -3,7 +3,7 @@ import BudsKit
 import Observation
 import SwiftUI
 
-// Panel state outside the views: SwiftUI's @State is a macro, which needs Xcode.
+/// Which page the panel shows, plus the preset being edited (it crosses pages).
 @MainActor
 @Observable
 final class PanelModel {
@@ -13,26 +13,20 @@ final class PanelModel {
   private(set) var forward = true
   var editing: Preset?
   var editingIsNew = false
-  var confirming: String?
   var ringing = false
-  var bassDraft: Double?
-  var promptDraft: Double?
-  var heights: [Page: CGFloat] = [:]
 
   func open(_ next: Page) {
     forward = true
-    confirming = nil
-    withAnimation(.snappy(duration: 0.3)) { page = next }
+    withAnimation(.snappy(duration: 0.18)) { page = next }
   }
 
   func back() {
     forward = false
-    confirming = nil
-    withAnimation(.snappy(duration: 0.3)) { page = parent }
+    withAnimation(.snappy(duration: 0.18)) { page = parent }
   }
 
   func home() {
-    if page != .home { forward = false }
+    forward = false
     page = .home
   }
 
@@ -45,21 +39,27 @@ final class PanelModel {
   }
 }
 
-@MainActor let panelModel = PanelModel()
+enum Metrics {
+  static let width: CGFloat = 300
+  static let padding: CGFloat = 10
+  static let section: CGFloat = 14
+  static let maxScroll: CGFloat = 480
+}
 
 struct PanelView: View {
   let session: BudsSession
-  let model: PanelModel
   let audio: OutputAudio
   let prefs: AppPrefs
+  @State private var model = PanelModel()
 
   var body: some View {
     ZStack(alignment: .top) {
       page
-        .id(model.page)
+        .id(session.isConnected ? model.page : .home)
         .transition(.push(from: model.forward ? .trailing : .leading))
     }
-    .frame(width: 340)
+    .frame(width: Metrics.width)
+    .font(.callout)
     .clipped()
     .onChange(of: session.isConnected) { _, connected in if !connected { model.home() } }
   }
@@ -72,7 +72,7 @@ struct PanelView: View {
     case .features: FeaturesPage(session: session, model: model, prefs: prefs)
     case .tools: ToolsPage(session: session, model: model)
     case .preset: PresetPage(session: session, model: model)
-    case .hearing: HearingPage(session: session, model: model, test: HearingModel.shared)
+    case .hearing: HearingPage(session: session, model: model)
     }
   }
 }
@@ -85,53 +85,66 @@ struct HomePage: View {
   let audio: OutputAudio
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      header
+    VStack(alignment: .leading, spacing: 8) {
+      header.padding(.horizontal, 6).padding(.top, 2)
       switch session.connection {
       case .connected:
-        BatteryRow(session: session).padding(.vertical, 2)
-        Tile {
-          NoiseControl(session: session).padding(.vertical, 10)
-        }
-        VolumeTile(session: session, audio: audio)
-        Tile {
-          NavRow(icon: "slider.vertical.3", color: .pink, title: "Sound", value: presetName) { model.open(.sound) }
-          NavRow(icon: "hand.tap.fill", color: .blue, title: "Controls") { model.open(.controls) }
-          NavRow(icon: "switch.2", color: .green, title: "Features") { model.open(.features) }
-          NavRow(icon: "wrench.and.screwdriver.fill", color: .orange, title: "Tools") { model.open(.tools) }
+        PanelSection { BatteryRow(session: session).padding(.vertical, 10) }
+        PanelSection { NoiseControl(session: session).padding(.vertical, 9) }
+        VolumeSection(session: session, audio: audio)
+        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+          GridRow {
+            NavTile(icon: "slider.vertical.3", color: .pink, title: "Sound", value: presetName ?? "Equalizer") { model.open(.sound) }
+            NavTile(icon: "hand.tap.fill", color: .blue, title: "Controls", value: "Taps and holds") { model.open(.controls) }
+          }
+          GridRow {
+            NavTile(icon: "switch.2", color: .green, title: "Features", value: featureSummary) { model.open(.features) }
+            NavTile(icon: "wrench.and.screwdriver.fill", color: .orange, title: "Tools", value: "Find, fit, hearing") { model.open(.tools) }
+          }
         }
       case .connecting:
-        HStack(spacing: 8) {
-          ProgressView().controlSize(.small)
-          Text("Connecting…").foregroundStyle(.secondary)
+        PanelSection {
+          HStack(spacing: 10) {
+            ProgressView().controlSize(.small)
+            Text("Connecting…").foregroundStyle(.secondary)
+          }
+          .padding(.vertical, 10)
         }
       case .searching:
-        Text("Looking for your earbuds…").foregroundStyle(.secondary)
+        PanelSection { Text("Looking for your earbuds…").foregroundStyle(.secondary).padding(.vertical, 10) }
       case .unavailable(let message):
-        Text(message).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        PanelSection {
+          VStack(alignment: .leading, spacing: 10) {
+            Text(message).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Button("Connect") { Task { await session.connect() } }
+              .buttonStyle(.glassProminent)
+          }
+          .padding(.vertical, 10)
+        }
       }
-      if let error = session.lastError, model.page == .home {
+      if let error = session.lastError {
         Label(error, systemImage: "exclamationmark.triangle.fill")
           .font(.caption)
           .foregroundStyle(.orange)
           .fixedSize(horizontal: false, vertical: true)
+          .padding(.horizontal, 6)
       }
-      footer
+      footer.padding(.horizontal, 6)
     }
-    .padding(14)
+    .padding(Metrics.padding)
   }
 
   private var presetName: String? {
     session.presets.first { $0.id == session.eq }?.name
   }
 
+  private var featureSummary: String {
+    let on = [Switch.wearDetection, .gameMode, .dualConnection, .smartVolume].filter { session.isOn($0) == true }.count
+    return on == 0 ? "All off" : "\(on) on"
+  }
+
   private var header: some View {
-    HStack(alignment: .center, spacing: 10) {
-      Image(systemName: "earbuds")
-        .font(.system(size: 15, weight: .medium))
-        .frame(width: 30, height: 30)
-        .background(Circle().fill(session.isConnected ? Color.accentColor : Color.primary.opacity(0.1)))
-        .foregroundStyle(session.isConnected ? Color.white : Color.secondary)
+    HStack(spacing: 10) {
       VStack(alignment: .leading, spacing: 1) {
         Text("OnePlus Buds 4").font(.headline)
         Text(subtitle).font(.caption).foregroundStyle(.secondary)
@@ -143,54 +156,49 @@ struct HomePage: View {
 
   private var subtitle: String {
     guard session.isConnected else { return "Not connected" }
-    return ["Connected", session.codec.flatMap { codecNames[$0] }, session.firmware.map { "Firmware \($0)" }]
-      .compactMap { $0 }.joined(separator: " · ")
+    if let codec = session.codec.flatMap({ codecNames[$0] }) { return "Connected with \(codec)" }
+    return "Connected"
   }
 
   private var footer: some View {
     HStack {
       if session.isConnected {
         Button("Disconnect") { session.disconnect() }
-      } else if case .connecting = session.connection {
-        EmptyView()
-      } else {
-        Button("Connect") { Task { await session.connect() } }
       }
       Spacer()
       Button("Quit") { NSApplication.shared.terminate(nil) }
     }
     .buttonStyle(.borderless)
-    .font(.callout)
     .foregroundStyle(.secondary)
+    .padding(.top, 2)
   }
 }
 
-struct VolumeTile: View {
+struct VolumeSection: View {
   let session: BudsSession
   let audio: OutputAudio
 
   var body: some View {
     let name: String? = if case .connected(let n) = session.connection { n } else { nil }
-    let buds = audio.buds(named: name)
-    if let buds, audio.current == buds, let volume = audio.volume {
-      Tile {
-        HStack(spacing: 10) {
-          Image(systemName: volume == 0 ? "speaker.slash.fill" : "speaker.fill").foregroundStyle(.secondary).frame(width: 16)
-          Slider(value: Binding(get: { volume }, set: { audio.setVolume($0) }), in: 0...1)
-            .controlSize(.small)
-          Image(systemName: "speaker.wave.3.fill").foregroundStyle(.secondary)
-        }
-        .padding(.vertical, 10)
-      }
-    } else if let buds {
-      Tile {
-        HStack {
-          VStack(alignment: .leading, spacing: 1) {
-            Text("Sound is playing elsewhere").font(.callout)
-            Text(audio.current?.name ?? "Another output").font(.caption).foregroundStyle(.secondary)
+    if let buds = audio.buds(named: name) {
+      PanelSection {
+        Group {
+          if audio.current == buds, let volume = audio.volume {
+            HStack(spacing: 8) {
+              Image(systemName: "speaker.fill").foregroundStyle(.secondary)
+              Slider(value: Binding(get: { volume }, set: { audio.setVolume($0) }), in: 0...1)
+                .controlSize(.small)
+              Image(systemName: "speaker.wave.3.fill").foregroundStyle(.secondary)
+            }
+            .imageScale(.small)
+          } else {
+            HStack {
+              Text("Playing on \(audio.current?.name ?? "another output")")
+                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+              Spacer()
+              Button("Use Buds") { audio.makeDefault(buds) }.buttonStyle(.glass).controlSize(.small)
+            }
           }
-          Spacer()
-          Button("Use Buds") { audio.makeDefault(buds) }.controlSize(.small)
         }
         .padding(.vertical, 8)
       }
@@ -200,20 +208,22 @@ struct VolumeTile: View {
 
 // MARK: Building blocks
 
-/// A rounded group, like a Control Center module.
-struct Tile<Content: View>: View {
+/// A rounded section of the panel, like a Control Center module.
+struct PanelSection<Content: View>: View {
   var title: String?
+  var padded = true
   @ViewBuilder let content: Content
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: 5) {
       if let title {
-        Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 6)
+        Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 8)
       }
       VStack(alignment: .leading, spacing: 0) { content }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, padded ? 12 : 4)
+        .padding(.vertical, padded ? 0 : 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.055)))
+        .background(.fill.quaternary, in: .rect(cornerRadius: Metrics.section))
     }
   }
 }
@@ -224,33 +234,41 @@ struct IconBadge: View {
 
   var body: some View {
     Image(systemName: icon)
-      .font(.system(size: 11, weight: .semibold))
+      .font(.system(size: 10, weight: .semibold))
       .foregroundStyle(.white)
       .frame(width: 22, height: 22)
-      .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(color.gradient))
+      .background(color.gradient, in: .circle)
   }
 }
 
-struct NavRow: View {
+/// A Control Center–style tile that opens a page.
+struct NavTile: View {
   let icon: String
   let color: Color
   let title: String
-  var value: String?
+  let value: String
   let action: () -> Void
+  @State private var hovering = false
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: 10) {
+      HStack(spacing: 8) {
         IconBadge(icon: icon, color: color)
-        Text(title)
-        Spacer()
-        if let value { Text(value).foregroundStyle(.secondary).lineLimit(1) }
-        Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+        VStack(alignment: .leading, spacing: 0) {
+          Text(title).font(.callout.weight(.medium))
+          Text(value).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+        }
+        Spacer(minLength: 0)
       }
-      .padding(.vertical, 8)
-      .contentShape(Rectangle())
+      .padding(.horizontal, 10)
+      .padding(.vertical, 9)
+      .frame(maxWidth: .infinity)
+      .background(hovering ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.fill.quaternary), in: .rect(cornerRadius: Metrics.section))
+      .contentShape(.rect(cornerRadius: Metrics.section))
     }
     .buttonStyle(.plain)
+    .onHover { hovering = $0 }
+    .animation(.easeOut(duration: 0.12), value: hovering)
   }
 }
 
@@ -261,17 +279,18 @@ struct ToggleRow: View {
   var disabled = false
 
   var body: some View {
-    HStack(alignment: .center, spacing: 10) {
+    Toggle(isOn: isOn) {
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
         if let subtitle {
           Text(subtitle).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
       }
-      Spacer(minLength: 8)
-      Toggle(title, isOn: isOn).toggleStyle(.switch).controlSize(.mini).labelsHidden().disabled(disabled)
     }
-    .padding(.vertical, 8)
+    .toggleStyle(.switch)
+    .controlSize(.small)
+    .disabled(disabled)
+    .padding(.vertical, 7)
   }
 }
 
@@ -280,37 +299,38 @@ struct StatusLine: View {
   let key: String
 
   var body: some View {
-    Group {
-      switch session.status[key] {
-      case .pending:
-        HStack(spacing: 6) {
-          ProgressView().controlSize(.mini)
-          Text("Waiting for the earbuds…")
+    if let status = session.status[key] {
+      Group {
+        switch status {
+        case .pending:
+          HStack(spacing: 6) {
+            ProgressView().controlSize(.mini)
+            Text("Waiting for the earbuds…")
+          }
+          .foregroundStyle(.secondary)
+        case .done(let text):
+          Label(text ?? "Confirmed", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+        case .failed(let message):
+          Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .foregroundStyle(.secondary)
-      case .done(let text):
-        Label(text ?? "Confirmed", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
-      case .failed(let message):
-        Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-          .fixedSize(horizontal: false, vertical: true)
-      case nil:
-        EmptyView()
       }
+      .font(.caption)
+      .padding(.bottom, 7)
+      .transition(.opacity)
     }
-    .font(.caption)
-    .padding(.bottom, session.status[key] == nil ? 0 : 8)
   }
 }
 
-/// A sub-page: back button and title, with content that scrolls once it outgrows the panel.
+/// A sub-page: glass back button and title, with content that scrolls once it outgrows the panel.
 struct SubPage<Content: View>: View {
   let title: String
   let model: PanelModel
   var onBack: (() -> Void)?
   @ViewBuilder let content: Content
+  @State private var height: CGFloat = 320
 
   var body: some View {
-    let page = model.page
     VStack(spacing: 0) {
       ZStack {
         Text(title).font(.headline)
@@ -319,30 +339,26 @@ struct SubPage<Content: View>: View {
             onBack?()
             model.back()
           } label: {
-            Image(systemName: "chevron.left").font(.system(size: 13, weight: .semibold))
-              .frame(width: 26, height: 26)
-              .background(Circle().fill(Color.primary.opacity(0.07)))
-              .contentShape(Circle())
+            Image(systemName: "chevron.left").font(.callout.weight(.semibold)).frame(width: 14, height: 14)
           }
-          .buttonStyle(.plain)
+          .buttonStyle(.glass)
+          .buttonBorderShape(.circle)
+          .controlSize(.small)
           .keyboardShortcut(.cancelAction)
           Spacer()
         }
       }
-      .padding(.horizontal, 14)
-      .padding(.vertical, 12)
+      .padding(.horizontal, Metrics.padding)
+      .padding(.top, Metrics.padding)
+      .padding(.bottom, 6)
       ScrollView {
-        VStack(alignment: .leading, spacing: 14) { content }
-          .padding(.horizontal, 14)
-          .padding(.bottom, 14)
-          .background(GeometryReader { geometry in
-            Color.clear
-              .onAppear { model.heights[page] = geometry.size.height }
-              .onChange(of: geometry.size.height) { _, height in model.heights[page] = height }
-          })
+        VStack(alignment: .leading, spacing: 10) { content }
+          .padding(.horizontal, Metrics.padding)
+          .padding(.bottom, Metrics.padding)
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
       }
-      .scrollIndicators(.automatic)
-      .frame(height: min(model.heights[page] ?? 320, 540))
+      .scrollEdgeEffectStyle(.soft, for: .top)
+      .frame(height: min(height, Metrics.maxScroll))
     }
   }
 }
@@ -368,24 +384,24 @@ struct BatteryGauge: View {
   let wear: WearState?
 
   var body: some View {
-    VStack(spacing: 6) {
+    VStack(spacing: 5) {
       ZStack {
-        Circle().stroke(.quaternary, lineWidth: 4)
+        Circle().stroke(.fill.tertiary, lineWidth: 3.5)
         Circle()
           .trim(from: 0, to: Double(level?.percent ?? 0) / 100)
-          .stroke(tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+          .stroke(tint, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
           .rotationEffect(.degrees(-90))
-          .animation(.easeOut(duration: 0.5), value: level?.percent)
-        Image(systemName: part == .chargingCase ? "earbuds.case" : "earbuds")
-          .font(.system(size: 17))
+          .animation(.smooth, value: level?.percent)
+        Image(systemName: part == .chargingCase ? "earbuds.case.fill" : "earbuds")
+          .font(.system(size: 14))
           .foregroundStyle(level?.percent == nil ? .tertiary : .primary)
       }
-      .frame(width: 48, height: 48)
+      .frame(width: 40, height: 40)
       HStack(spacing: 2) {
         if level?.charging == true { Image(systemName: "bolt.fill").font(.caption2).foregroundStyle(.green) }
-        Text(level?.percent.map { "\($0)%" } ?? "–").font(.callout.monospacedDigit())
+        Text(level?.percent.map { "\($0)%" } ?? "–").font(.caption.weight(.medium).monospacedDigit())
       }
-      Text(note).font(.caption).foregroundStyle(.secondary)
+      Text(note).font(.caption2).foregroundStyle(.secondary)
     }
   }
 
@@ -443,32 +459,35 @@ struct NoiseControl: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 10) {
       Text("Noise Control").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-      HStack(alignment: .top, spacing: 6) {
-        ForEach(Group.allCases, id: \.self) { group in
-          Button {
-            guard current != group else { return }
-            Task { await session.setNoise(group.mode) }
-          } label: {
-            VStack(spacing: 6) {
-              Image(systemName: group.symbol)
-                .font(.system(size: 15, weight: .medium))
-                .frame(width: 40, height: 40)
-                .background(Circle().fill(current == group ? Color.accentColor : Color.primary.opacity(0.1)))
-                .foregroundStyle(current == group ? Color.white : Color.primary)
-              Text(group.title)
-                .font(.caption2)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+      GlassEffectContainer(spacing: 12) {
+        HStack(alignment: .top, spacing: 4) {
+          ForEach(Group.allCases, id: \.self) { group in
+            let selected = current == group
+            Button {
+              guard !selected else { return }
+              Task { await session.setNoise(group.mode) }
+            } label: {
+              VStack(spacing: 7) {
+                Image(systemName: group.symbol)
+                  .font(.system(size: 13, weight: .medium))
+                  .frame(width: 34, height: 34)
+                  .foregroundStyle(selected ? Color.white : Color.primary)
+                  .glassEffect(selected ? .regular.tint(.accentColor).interactive() : .regular.interactive(), in: .circle)
+                Text(group.title)
+                  .font(.caption2)
+                  .multilineTextAlignment(.center)
+                  .lineLimit(2)
+                  .fixedSize(horizontal: false, vertical: true)
+              }
+              .frame(maxWidth: .infinity)
+              .contentShape(.rect)
             }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .disabled(session.busy)
+            .accessibilityAddTraits(selected ? .isSelected : [])
           }
-          .buttonStyle(.plain)
-          .disabled(session.busy)
-          .accessibilityAddTraits(current == group ? .isSelected : [])
         }
       }
       if current == .anc {
@@ -482,7 +501,6 @@ struct NoiseControl: View {
         }
         .pickerStyle(.segmented)
         .labelsHidden()
-        .controlSize(.small)
         .disabled(session.busy)
         if session.noise?.mode == .smart, let level = session.smartLevel, level != .smart {
           Text("Smart is using \(level.rawValue) right now.").font(.caption).foregroundStyle(.secondary)
@@ -490,5 +508,6 @@ struct NoiseControl: View {
       }
       StatusLine(session: session, key: "noise")
     }
+    .animation(.smooth, value: current)
   }
 }

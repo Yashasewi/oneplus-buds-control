@@ -76,20 +76,35 @@ final class RFCOMMLink: NSObject {
     sdpContinuation = nil
   }
 
-  @objc func sdpQueryComplete(_ device: IOBluetoothDevice!, status: IOReturn) { finishSDP(status) }
+  @objc nonisolated func sdpQueryComplete(_ device: IOBluetoothDevice!, status: IOReturn) {
+    onMain { self.finishSDP(status) }
+  }
 }
 
-extension RFCOMMLink: @preconcurrency IOBluetoothRFCOMMChannelDelegate {
-  func rfcommChannelOpenComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel!, status error: IOReturn) {
-    finishOpen(error == kIOReturnSuccess ? .success(()) : .failure(LinkError.openFailed(error)))
+/// IOBluetooth calls back on whatever thread it likes (macOS 27 posts connection events off the main thread).
+nonisolated func onMain(_ work: @escaping @MainActor () -> Void) {
+  if Thread.isMainThread {
+    MainActor.assumeIsolated(work)
+  } else {
+    DispatchQueue.main.async { MainActor.assumeIsolated(work) }
   }
-  func rfcommChannelData(_ rfcommChannel: IOBluetoothRFCOMMChannel!, data: UnsafeMutableRawPointer!, length: Int) {
-    onData(Array(UnsafeRawBufferPointer(start: data, count: length).bindMemory(to: UInt8.self)))
+}
+
+extension RFCOMMLink: IOBluetoothRFCOMMChannelDelegate {
+  nonisolated func rfcommChannelOpenComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel!, status error: IOReturn) {
+    onMain { self.finishOpen(error == kIOReturnSuccess ? .success(()) : .failure(LinkError.openFailed(error))) }
   }
-  func rfcommChannelClosed(_ rfcommChannel: IOBluetoothRFCOMMChannel!) {
-    guard rfcommChannel === channel else { return }
-    channel = nil
-    onClose()
+  nonisolated func rfcommChannelData(_ rfcommChannel: IOBluetoothRFCOMMChannel!, data: UnsafeMutableRawPointer!, length: Int) {
+    let bytes = Array(UnsafeRawBufferPointer(start: data, count: length).bindMemory(to: UInt8.self))
+    onMain { self.onData(bytes) }
+  }
+  nonisolated func rfcommChannelClosed(_ rfcommChannel: IOBluetoothRFCOMMChannel!) {
+    nonisolated(unsafe) let closed = rfcommChannel
+    onMain {
+      guard closed === self.channel else { return }
+      self.channel = nil
+      self.onClose()
+    }
   }
 }
 
@@ -123,6 +138,12 @@ final class DeviceWatcher: NSObject {
     disconnectNotes = [device.register(forDisconnectNotification: self, selector: #selector(disconnected(_:device:)))].compactMap { $0 }
   }
 
-  @objc private func connected(_ note: IOBluetoothUserNotification, device: IOBluetoothDevice) { onConnect(device) }
-  @objc private func disconnected(_ note: IOBluetoothUserNotification, device: IOBluetoothDevice) { onDisconnect(device) }
+  @objc private nonisolated func connected(_ note: IOBluetoothUserNotification, device: IOBluetoothDevice) {
+    nonisolated(unsafe) let device = device
+    onMain { self.onConnect(device) }
+  }
+  @objc private nonisolated func disconnected(_ note: IOBluetoothUserNotification, device: IOBluetoothDevice) {
+    nonisolated(unsafe) let device = device
+    onMain { self.onDisconnect(device) }
+  }
 }

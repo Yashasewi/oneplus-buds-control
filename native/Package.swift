@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import Foundation
 import PackageDescription
 
@@ -6,7 +6,7 @@ let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().path
 
 let package = Package(
   name: "BudsNative",
-  platforms: [.macOS(.v14)],
+  platforms: [.macOS(.v26)],
   products: [
     .executable(name: "BudsBar", targets: ["BudsBar"]),
     .executable(name: "budsprobe", targets: ["budsprobe"]),

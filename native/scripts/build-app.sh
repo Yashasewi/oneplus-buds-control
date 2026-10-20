@@ -5,6 +5,10 @@
 #   scripts/build-app.sh --install  also copy to ~/Applications
 set -e
 cd "$(dirname "$0")/.."
+# SwiftUI's macros (@State, #Preview) need full Xcode, not just the Command Line Tools.
+if [ -z "$DEVELOPER_DIR" ] && [ -d /Applications/Xcode.app ]; then
+  export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+fi
 swift build -c release --product BudsBar
 APP=.build/BudsBar.app
 pkill -x BudsBar 2>/dev/null || true
@@ -23,7 +27,7 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.1</string>
   <key>CFBundleVersion</key><string>1</string>
-  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSMinimumSystemVersion</key><string>26.0</string>
   <key>LSUIElement</key><true/>
   <key>NSBluetoothAlwaysUsageDescription</key><string>Buds talks to your OnePlus Buds 4 to show battery and change settings.</string>
 </dict>

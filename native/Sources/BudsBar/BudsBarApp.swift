@@ -2,28 +2,34 @@ import AppKit
 import BudsKit
 import SwiftUI
 
-// Long-lived objects as globals. (Not @State: SwiftUI's macros need Xcode, and this builds with the
-// Command Line Tools; @Observable tracking works through plain references.)
-@MainActor let sharedSession = BudsSession()
-@MainActor let outputAudio = OutputAudio()
-@MainActor let appPrefs = AppPrefs()
-@MainActor let companion = Companion(session: sharedSession, prefs: appPrefs)
-
 @main
 struct BudsBarApp: App {
+  @State private var session: BudsSession
+  @State private var audio = OutputAudio()
+  @State private var prefs: AppPrefs
+  private let companion: Companion
+
   init() {
+    let session = BudsSession()
+    let prefs = AppPrefs()
+    let audio = OutputAudio()
+    let companion = Companion(session: session, prefs: prefs)
+    _session = State(initialValue: session)
+    _prefs = State(initialValue: prefs)
+    _audio = State(initialValue: audio)
+    self.companion = companion
     DispatchQueue.main.async {
-      sharedSession.start()
-      outputAudio.start()
+      session.start()
+      audio.start()
       companion.start()
     }
   }
 
   var body: some Scene {
     MenuBarExtra {
-      PanelView(session: sharedSession, model: panelModel, audio: outputAudio, prefs: appPrefs)
+      PanelView(session: session, audio: audio, prefs: prefs)
     } label: {
-      MenuBarLabel(session: sharedSession)
+      MenuBarLabel(session: session)
     }
     .menuBarExtraStyle(.window)
   }
