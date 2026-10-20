@@ -53,6 +53,7 @@ Start at login, auto-connect, a global shortcut for the noise cycle, low-battery
 ### Milestones
 
 1. **Link proof:** a command-line Swift tool opens RFCOMM, sends `0x0100`/`0x0103`, prints battery and receives a wearing push. This answers the main native unknown before any UI work.
+   Done (`native/`, run with `native/scripts/run-probe.sh`). Finding: macOS refuses every RFCOMM channel (`openRFCOMMChannelSync` returns `0xe00002bc`, the async open never completes) when the tool runs as a bare binary from a terminal, even with Bluetooth permission granted. The same binary inside an ad-hoc-signed `.app` launched through LaunchServices connects at once, reads identity, firmware, battery, wearing and noise, and receives live events. The menu-bar app is a bundle anyway; tools must be wrapped the same way. The control service is SDP "enco link" on channel 15 for this pair.
 2. **BudsKit:** port the encoder, framer, decoders and session; reproduce the frame examples.
 3. **Menu-bar MVP:** icon with battery, panel with noise mode and EQ preset, auto-connect.
 4. **Full parity with the web app:** settings window with every current control and tool.

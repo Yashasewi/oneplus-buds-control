@@ -152,7 +152,11 @@ final class Probe: NSObject {
     for d in buds { d.performSDPQuery(self) }
   }
 
-  private func open(_ target: IOBluetoothDevice, channel id: BluetoothRFCOMMChannelID) {
+  private func open(_ target: IOBluetoothDevice, channel found: BluetoothRFCOMMChannelID) {
+    let override = CommandLine.arguments.firstIndex(of: "--channel").flatMap { i in
+      CommandLine.arguments.indices.contains(i + 1) ? BluetoothRFCOMMChannelID(CommandLine.arguments[i + 1]) : nil
+    }
+    let id = override ?? found
     device = target
     log("Opening RFCOMM channel \(id) on \(target.name ?? "earbuds")…")
     var opened: IOBluetoothRFCOMMChannel?
@@ -172,7 +176,7 @@ final class Probe: NSObject {
       MainActor.assumeIsolated {
         if !self.isOpen {
           log("Channel state: open \(self.channel?.isOpen() ?? false), MTU \(self.channel?.getMTU() ?? 0), baseband connected \(target.isConnected())")
-          self.finish("The channel did not open within 10 s. Another app (a Chrome tab with the earbuds connected, or HeyMelody) is probably holding it. Close it and run again.", code: 1)
+          self.finish("The channel did not open within 10 s. Run this as an app bundle (scripts/run-probe.sh), not as a bare binary, and make sure no Chrome tab is connected to the earbuds.", code: 1)
         }
       }
     }
@@ -182,6 +186,7 @@ final class Probe: NSObject {
   private func connected() {
     isOpen = true
     log("Connected.")
+    if CommandLine.arguments.contains("--channel") { return finish("Opened the test channel; closing without sending anything.", code: 0) }
     queue = [
       Request(label: "Capabilities", command: 0x0100, payload: []) { $0.first == 0 ? hex(Array($0.dropFirst())) : "declined \(hex($0))" },
       Request(label: "Model", command: 0x0103, payload: []) { p in
@@ -193,7 +198,8 @@ final class Probe: NSObject {
       Request(label: "Battery", command: 0x0106, payload: []) { battery($0, status: true) },
       Request(label: "Wearing", command: 0x0109, payload: [], decode: wearing),
       Request(label: "Noise mode", command: 0x010C, payload: [1, 1], decode: noise),
-      Request(label: "Subscribe to battery, wearing, noise", command: 0x0205, payload: [3, 1, 2, 3]) { $0.first == 0 ? "ok" : "declined \(hex($0))" },
+      // Reply grammar is only partly known (seen: 01 03 01 00 02 00 03 00); live events arriving is the real check.
+      Request(label: "Subscribe to battery, wearing, noise", command: 0x0205, payload: [3, 1, 2, 3]) { "acknowledged (\(hex($0)))" },
     ]
     next()
   }
@@ -248,6 +254,7 @@ final class Probe: NSObject {
     case 0x0204 where p.first == 1: log("Live battery: \(battery(Array(p.dropFirst()), status: false))")
     case 0x0204 where p.first == 2: log("Live wearing: \(wearing(Array(p.dropFirst())))")
     case 0x0204 where p.first == 3 && p.count >= 4 && p[1] == 1 && p[2] == 1: log("Live noise mode: \(noise([0] + p.dropFirst()))")
+    case 0x0204 where p.first == 6: log("Connected-devices update (names not shown)")
     case 0x0500:
       // The buds ask for the time; HeyMelody answers 00 <unix seconds u32 LE>.
       let now = UInt32(Date().timeIntervalSince1970)
