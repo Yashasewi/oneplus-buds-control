@@ -128,6 +128,14 @@ final class Probe: NSObject {
     let paired = (IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice]) ?? []
     log("Paired devices: " + (paired.isEmpty ? "none (is Bluetooth on, and does this terminal have Bluetooth permission?)"
       : paired.map { "\($0.name ?? "unnamed")\($0.isConnected() ? " (connected)" : "")" }.joined(separator: ", ")))
+    if CommandLine.arguments.contains("--fresh"), !sdpTried,
+      let buds = paired.first(where: { $0.isConnected() && ($0.name ?? "").contains("OnePlus Buds") })
+    {
+      sdpTried = true
+      log("Asking \(buds.name ?? "the earbuds") for a fresh service list…")
+      buds.performSDPQuery(self)
+      return
+    }
     for candidate in paired {
       if let record = candidate.getServiceRecord(for: uuid) {
         var id: BluetoothRFCOMMChannelID = 0
@@ -148,6 +156,13 @@ final class Probe: NSObject {
     device = target
     log("Opening RFCOMM channel \(id) on \(target.name ?? "earbuds")…")
     var opened: IOBluetoothRFCOMMChannel?
+    if CommandLine.arguments.contains("--sync") {
+      let status = target.openRFCOMMChannelSync(&opened, withChannelID: id, delegate: self)
+      log("Blocking open returned \(String(format: "0x%08x", status)), channel open: \(opened?.isOpen() ?? false)")
+      channel = opened
+      if status == kIOReturnSuccess { connected() } else { finish("Blocking open failed.", code: 1) }
+      return
+    }
     let status = target.openRFCOMMChannelAsync(&opened, withChannelID: id, delegate: self)
     guard status == kIOReturnSuccess else {
       return finish("Could not open the channel (\(String(format: "0x%08x", status))). Is Chrome connected to the earbuds? Disconnect it first.", code: 1)
@@ -156,6 +171,7 @@ final class Probe: NSObject {
     DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
       MainActor.assumeIsolated {
         if !self.isOpen {
+          log("Channel state: open \(self.channel?.isOpen() ?? false), MTU \(self.channel?.getMTU() ?? 0), baseband connected \(target.isConnected())")
           self.finish("The channel did not open within 10 s. Another app (a Chrome tab with the earbuds connected, or HeyMelody) is probably holding it. Close it and run again.", code: 1)
         }
       }
@@ -249,6 +265,12 @@ final class Probe: NSObject {
   }
 
   fileprivate func sdpComplete(_ target: IOBluetoothDevice, status: IOReturn) {
+    log("Service query finished (\(String(format: "0x%08x", status))). Services:")
+    for record in (target.services as? [IOBluetoothSDPServiceRecord]) ?? [] {
+      var id: BluetoothRFCOMMChannelID = 0
+      let rfcomm = record.getRFCOMMChannelID(&id) == kIOReturnSuccess ? "RFCOMM \(id)" : "no RFCOMM"
+      log("  \(record.getServiceName() ?? "unnamed"): \(rfcomm)\(record.hasService(from: [uuid]) ? "  <- Buds control" : "")")
+    }
     guard status == kIOReturnSuccess, let record = target.getServiceRecord(for: uuid) else {
       return finish("\(target.name ?? "Device") does not offer the Buds control service.", code: 1)
     }
