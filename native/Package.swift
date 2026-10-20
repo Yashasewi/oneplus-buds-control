@@ -6,8 +6,22 @@ let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().path
 
 let package = Package(
   name: "BudsNative",
-  platforms: [.macOS(.v13)],
+  platforms: [.macOS(.v14)],
+  products: [
+    .executable(name: "BudsBar", targets: ["BudsBar"]),
+    .executable(name: "budsprobe", targets: ["budsprobe"]),
+  ],
   targets: [
+    .target(
+      name: "BudsKit",
+      path: "Sources/BudsKit",
+      linkerSettings: [.linkedFramework("IOBluetooth")]
+    ),
+    .executableTarget(
+      name: "BudsBar",
+      dependencies: ["BudsKit"],
+      path: "Sources/BudsBar"
+    ),
     .executableTarget(
       name: "budsprobe",
       path: "Sources/budsprobe",
@@ -19,6 +33,6 @@ let package = Package(
           "-Xlinker", "\(root)/Support/budsprobe-Info.plist",
         ]),
       ]
-    )
+    ),
   ]
 )
