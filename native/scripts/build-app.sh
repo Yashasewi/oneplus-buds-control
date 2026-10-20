@@ -2,7 +2,7 @@
 # Build BudsBar.app (menu-bar app) with SwiftPM and wrap it in an ad-hoc-signed bundle.
 # macOS only opens Bluetooth RFCOMM channels for app bundles, so the bare binary cannot be run directly.
 #   scripts/build-app.sh            build and launch
-#   scripts/build-app.sh --install  also copy to ~/Applications
+#   scripts/build-app.sh --install  also copy to /Applications and launch from there
 set -e
 cd "$(dirname "$0")/.."
 # SwiftUI's macros (@State, #Preview) need full Xcode, not just the Command Line Tools.
@@ -35,10 +35,9 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
 EOF
 codesign --force --sign - "$APP"
 if [ "$1" = "--install" ]; then
-  mkdir -p "$HOME/Applications"
-  rm -rf "$HOME/Applications/BudsBar.app"
-  cp -R "$APP" "$HOME/Applications/BudsBar.app"
-  APP="$HOME/Applications/BudsBar.app"
+  rm -rf /Applications/BudsBar.app "$HOME/Applications/BudsBar.app"
+  cp -R "$APP" /Applications/BudsBar.app
+  APP=/Applications/BudsBar.app
 fi
 open "$APP"
 echo "Launched $APP"
