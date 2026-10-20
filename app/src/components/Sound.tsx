@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  CODECS,
   EQ_BANDS,
   EQ_GAIN,
   EQ_MAX_CUSTOM,
@@ -94,6 +95,11 @@ export function Sound() {
           id={SWITCHES.hiRes}
           title="Hi-Res audio"
           description="Higher-quality wireless audio. Changing it restarts the connection for a few seconds."
+          unavailable={
+            state.codec !== undefined && state.codec !== 7 && state.codec !== 8
+              ? `Needs LHDC, which macOS doesn’t support. This Mac is connected with ${CODECS[state.codec] ?? "another codec"}, so the earbuds refuse it here. It is set separately for each device, so it can still be on for your phone.`
+              : undefined
+          }
         />
       )}
       {f[SWITCHES.spatial] !== undefined && (
@@ -384,10 +390,12 @@ export function SwitchRow({
   id,
   title,
   description,
+  unavailable,
 }: {
   id: number;
   title: string;
   description: string;
+  unavailable?: string;
 }) {
   const { state } = useBuds();
   const key = `switch-${id}`;
@@ -450,13 +458,13 @@ export function SwitchRow({
   return (
     <Row
       title={title}
-      description={description}
+      description={unavailable ?? description}
       status={status}
       control={
         <Switch
           label={title}
           on={value === undefined ? undefined : value === 1}
-          disabled={busy}
+          disabled={busy || !!unavailable}
           onChange={change}
         />
       }

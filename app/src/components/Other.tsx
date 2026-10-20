@@ -1,18 +1,7 @@
-import { SWITCHES } from "../lib/protocol";
+import { CODECS, SWITCHES } from "../lib/protocol";
 import { run, session, useAction, useBuds } from "../lib/store";
 import { SwitchRow } from "./Sound";
 import { Group, Range, Row, cx } from "./ui";
-
-const CODECS: Record<number, string> = {
-  1: "SBC",
-  2: "AAC",
-  3: "LDAC",
-  4: "aptX",
-  5: "aptX HD",
-  6: "aptX Adaptive",
-  7: "LHDC",
-  8: "LHDC V5",
-};
 
 export function Features() {
   const { state } = useBuds();

@@ -640,6 +640,16 @@ export function bassLevel(p: Bytes) {
   if (p.length !== 4 || p[1] !== 0xfb || p[2] !== 5) throw Error("Invalid BassWave reply");
   return signed(p[3]);
 }
+export const CODECS: Record<number, string> = {
+  1: "SBC",
+  2: "AAC",
+  3: "LDAC",
+  4: "aptX",
+  5: "aptX HD",
+  6: "aptX Adaptive",
+  7: "LHDC",
+  8: "LHDC V5",
+};
 export interface HostDevice {
   name: string;
   connected: boolean;
