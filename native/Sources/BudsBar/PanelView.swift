@@ -279,17 +279,20 @@ struct ToggleRow: View {
   var disabled = false
 
   var body: some View {
-    Toggle(isOn: isOn) {
+    HStack(spacing: 10) {
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
         if let subtitle {
           Text(subtitle).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
       }
+      Spacer(minLength: 8)
+      Toggle(title, isOn: isOn)
+        .labelsHidden()
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+        .disabled(disabled)
     }
-    .toggleStyle(.switch)
-    .controlSize(.small)
-    .disabled(disabled)
     .padding(.vertical, 7)
   }
 }

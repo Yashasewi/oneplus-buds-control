@@ -39,7 +39,7 @@ struct StepSlider: View {
         Spacer()
         Text(format(Int(shown))).monospacedDigit().foregroundStyle(.secondary)
       }
-      Slider(value: Binding(get: { shown }, set: { draft = $0 }), in: range, step: 1) { editing in
+      Slider(value: Binding(get: { shown }, set: { draft = $0.rounded() }), in: range) { editing in
         guard !editing, let picked = draft else { return }
         draft = nil
         if Int(picked) != value { commit(Int(picked)) }
@@ -186,7 +186,7 @@ struct PresetPage: View {
             VStack(spacing: 8) {
               Text(signedText(gains[index])).font(.caption.monospacedDigit())
               Slider(value: Binding(get: { Double(gains[index]) }, set: { gains[index] = Int($0.rounded()) }),
-                in: Double(-eqGain)...Double(eqGain), step: 1)
+                in: Double(-eqGain)...Double(eqGain))
                 .rotationEffect(.degrees(-90))
                 .frame(width: 140, height: 24)
                 .frame(width: 32, height: 140)
@@ -484,9 +484,9 @@ struct ToolsPage: View {
 
   var body: some View {
     SubPage(title: "Tools", model: model) {
-      if session.supports(0x0400) {
-        PanelSection {
-          toolRow(icon: "dot.radiowaves.left.and.right", color: .red, title: "Find earbuds", description: "Play a sound from both earbuds.") {
+      PanelSection {
+        if session.supports(0x0400) {
+          toolRow(icon: "dot.radiowaves.left.and.right", color: .red, title: "Find earbuds", description: "Ring both earbuds.") {
             Button(model.ringing ? "Stop" : "Ring") {
               if model.ringing {
                 Task { if await session.findEarbuds(false) { model.ringing = false } }
@@ -503,9 +503,8 @@ struct ToolsPage: View {
           }
           StatusLine(session: session, key: "find")
         }
-      }
-      if session.supports(0x0405) {
-        PanelSection {
+        if session.supports(0x0405) {
+          Divider()
           toolRow(icon: "ear", color: .teal, title: "Fit test", description: fitText) {
             Button("Check") { confirming = "fit" }.disabled(session.busy || confirming == "fit")
           }
@@ -516,11 +515,10 @@ struct ToolsPage: View {
           }
           StatusLine(session: session, key: "fit")
         }
-      }
-      if session.supports(0x040D) {
-        PanelSection {
+        if session.supports(0x040D) {
+          Divider()
           toolRow(icon: "waveform.path.ecg", color: .yellow, title: "Hearing test",
-            description: "Twelve short tones. The result becomes your Golden Sound profile.") {
+            description: "Make a Golden Sound profile.") {
             Button("Start") { model.open(.hearing) }.disabled(session.busy)
           }
           StatusLine(session: session, key: "hearing")
@@ -531,7 +529,7 @@ struct ToolsPage: View {
   }
 
   private var fitText: String {
-    guard let fit = session.fit else { return "Check that the ear tips seal well." }
+    guard let fit = session.fit else { return "Check the ear tip seal." }
     return "Left: \(fit.left ?? "not measured"). Right: \(fit.right ?? "not measured")."
   }
 
@@ -543,7 +541,7 @@ struct ToolsPage: View {
         Text(description).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
       }
       Spacer(minLength: 8)
-      control().buttonStyle(.glass)
+      control().buttonStyle(.glass).controlSize(.small)
     }
     .padding(.vertical, 9)
   }
@@ -607,7 +605,7 @@ struct HearingPage: View {
               }
             }
             Slider(value: Binding(get: { Double(levels[step]) }, set: { slide(to: $0) }),
-              in: 0...Double(hearingStops.count - 1), step: 1) {
+              in: 0...Double(hearingStops.count - 1)) {
               Text("Tone level")
             } minimumValueLabel: {
               Image(systemName: "speaker.fill")
