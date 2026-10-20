@@ -231,11 +231,7 @@ struct ControlsPage: View {
 
   var body: some View {
     SubPage(title: "Controls", model: model) {
-      Picker("Earbud", selection: $ear) {
-        ForEach(Ear.allCases, id: \.self) { Text($0.title).tag($0) }
-      }
-      .pickerStyle(.segmented)
-      .labelsHidden()
+      GlassTabs(selection: $ear, options: Ear.allCases) { $0.title }
       let actions = Gestures.order.filter { slot(ear, $0) != nil }
       PanelSection {
         if actions.isEmpty {
@@ -253,7 +249,7 @@ struct ControlsPage: View {
         PanelSection(title: "During calls") {
           ForEach(calls, id: \.self) { action in
             let current = session.gestures.first { $0.button == 6 && $0.action == action }?.function
-            menuRow(Gestures.actions[action] ?? "Action \(action)", menu: Gestures.callMenus[action] ?? [], current: current) { fn in
+            menuRow(action, call: true, menu: Gestures.callMenus[action] ?? [], current: current) { fn in
               Task { await session.setCallGesture(action: action, function: fn) }
             }
             StatusLine(session: session, key: "call-\(action)")
@@ -270,7 +266,7 @@ struct ControlsPage: View {
   @ViewBuilder
   private func gestureRow(_ ear: Ear, _ action: UInt8) -> some View {
     let current = slot(ear, action)?.function
-    menuRow(Gestures.actions[action] ?? "Action \(action)", menu: Gestures.menus[action] ?? [], current: current) { fn in
+    menuRow(action, call: false, menu: Gestures.menus[action] ?? [], current: current) { fn in
       Task { await session.setGesture(ear, action: action, function: fn) }
     }
     StatusLine(session: session, key: "gesture-\(ear.rawValue)-\(action)")
@@ -279,16 +275,99 @@ struct ControlsPage: View {
     }
   }
 
-  private func menuRow(_ title: String, menu: [UInt8], current: UInt8?, set: @escaping @Sendable (UInt8) -> Void) -> some View {
-    Picker(title, selection: Binding(get: { current ?? 0 }, set: set)) {
-      if let current, !menu.contains(current) {
-        Text(Gestures.functions[current] ?? "Unknown (\(current))").tag(current)
+  private func menuRow(_ action: UInt8, call: Bool, menu: [UInt8], current: UInt8?, set: @escaping @Sendable (UInt8) -> Void) -> some View {
+    let options = current.map { menu.contains($0) ? menu : [$0] + menu } ?? menu
+    return HStack(spacing: 10) {
+      Image(systemName: GestureIcons.action(action, call: call))
+        .foregroundStyle(.secondary)
+        .frame(width: 18)
+      Text(Gestures.actions[action] ?? "Action \(action)")
+      Spacer(minLength: 8)
+      Menu {
+        Picker(Gestures.actions[action] ?? "", selection: Binding(get: { current ?? 0 }, set: set)) {
+          ForEach(options, id: \.self) { fn in
+            Label(Gestures.functions[fn] ?? "Function \(fn)", systemImage: GestureIcons.function(fn)).tag(fn)
+          }
+        }
+        .pickerStyle(.inline)
+        .labelsHidden()
+      } label: {
+        HStack(spacing: 4) {
+          Text(current.flatMap { Gestures.functions[$0] } ?? "Unknown")
+          Image(systemName: "chevron.up.chevron.down").font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(.secondary)
       }
-      ForEach(menu, id: \.self) { fn in Text(Gestures.functions[fn] ?? "Function \(fn)").tag(fn) }
+      .menuStyle(.button)
+      .buttonStyle(.plain)
+      .menuIndicator(.hidden)
+      .fixedSize()
+      .disabled(session.busy)
     }
-    .pickerStyle(.menu)
-    .disabled(session.busy)
-    .padding(.vertical, 7)
+    .padding(.vertical, 8)
+  }
+}
+
+enum GestureIcons {
+  static func action(_ action: UInt8, call: Bool) -> String {
+    if call { return action == 6 ? "phone.down" : "phone" }
+    return switch action {
+    case 1: "hand.tap"
+    case 2: "2.circle"
+    case 3: "3.circle"
+    case 4: "hand.point.up.left"
+    case 5: "arrow.up.and.down"
+    default: "hand.point.up.left.fill"
+    }
+  }
+
+  static func function(_ fn: UInt8) -> String {
+    switch fn {
+    case 0: "nosign"
+    case 1: "playpause"
+    case 3: "mic"
+    case 5: "backward"
+    case 6: "forward"
+    case 7: "speaker.wave.2"
+    case 8: "circle.lefthalf.filled"
+    case 10: "forward.end.alt"
+    case 11: "speaker.plus"
+    case 12: "speaker.minus"
+    case 13: "arrow.left.arrow.right"
+    case 17: "gamecontroller"
+    case 28: "phone.down"
+    case 29: "phone"
+    default: "questionmark"
+    }
+  }
+}
+
+/// A full-width segmented switch in Liquid Glass.
+struct GlassTabs<Value: Hashable>: View {
+  @Binding var selection: Value
+  let options: [Value]
+  let title: (Value) -> String
+
+  var body: some View {
+    GlassEffectContainer(spacing: 4) {
+      HStack(spacing: 4) {
+        ForEach(options, id: \.self) { option in
+          let selected = option == selection
+          Button {
+            withAnimation(.snappy(duration: 0.18)) { selection = option }
+          } label: {
+            Text(title(option))
+              .fontWeight(selected ? .semibold : .regular)
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 6)
+              .foregroundStyle(selected ? Color.white : Color.primary)
+              .glassEffect(selected ? .regular.tint(.accentColor).interactive() : .regular.interactive(), in: .capsule)
+              .contentShape(.capsule)
+          }
+          .buttonStyle(.plain)
+        }
+      }
+    }
   }
 }
 
@@ -297,32 +376,48 @@ struct HoldCycleRow: View {
   let modes: Set<HoldMode>
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text("Cycles through, on both earbuds").font(.caption).foregroundStyle(.secondary)
-      GlassEffectContainer(spacing: 6) {
-        HStack(spacing: 6) {
+    VStack(alignment: .leading, spacing: 10) {
+      Text("Modes to cycle through, on both earbuds").font(.caption).foregroundStyle(.secondary)
+      GlassEffectContainer(spacing: 8) {
+        HStack(alignment: .top, spacing: 2) {
           ForEach(HoldMode.allCases, id: \.self) { mode in
             let on = modes.contains(mode)
             Button {
               Task { await session.setHoldCycle(on ? modes.subtracting([mode]) : modes.union([mode])) }
             } label: {
-              Text(mode == .anc ? "Noise canc." : mode.title)
-                .font(.caption)
-                .lineLimit(1)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity)
-                .foregroundStyle(on ? Color.white : Color.primary)
-                .glassEffect(on ? .regular.tint(.accentColor).interactive() : .regular.interactive(), in: .capsule)
+              VStack(spacing: 5) {
+                Image(systemName: icon(mode))
+                  .font(.system(size: 12, weight: .medium))
+                  .frame(width: 30, height: 30)
+                  .foregroundStyle(on ? Color.white : Color.primary)
+                  .glassEffect(on ? .regular.tint(.accentColor).interactive() : .regular.interactive(), in: .circle)
+                Text(mode == .anc ? "Noise Cancel" : mode.title)
+                  .font(.caption2)
+                  .foregroundStyle(on ? .primary : .secondary)
+                  .lineLimit(1)
+                  .minimumScaleFactor(0.85)
+              }
+              .frame(maxWidth: .infinity)
+              .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .disabled(session.busy || (on && modes.count == 1))
+            .accessibilityAddTraits(on ? .isSelected : [])
           }
         }
       }
       StatusLine(session: session, key: "holdCycle")
     }
-    .padding(.bottom, 7)
+    .padding(.bottom, 8)
+  }
+
+  private func icon(_ mode: HoldMode) -> String {
+    switch mode {
+    case .off: "circle.slash"
+    case .anc: "person.and.background.dotted"
+    case .transparency: "ear.and.waveform"
+    case .adaptive: "sparkles"
+    }
   }
 }
 
