@@ -68,7 +68,7 @@ export class BudsSession extends EventTarget {
   }
   async close(reason='Disconnected') {
     if(this.closing)return this.closing;
-    this.connected=false;++this.generation;
+    this.connected=false;++this.generation;clearTimeout(this.batteryTimer);
     for(const item of this.pending.values())item.reject(Error(reason));this.pending.clear();
     for(const waiter of this.waiters)waiter.reject(Error(reason));this.waiters.clear();
     const reader=this.reader;this.reader=null;
@@ -126,7 +126,18 @@ export class BudsSession extends EventTarget {
     if(frame.command===0x0204&&this.state.model===MODEL){
       let patch;
       if(p[0]===1){const battery=pairs(p.slice(1),{battery:true});if(battery)patch={battery:{...this.state.battery,...battery}};}
-      if(p[0]===2){const wearing=pairs(p.slice(1));if(wearing)patch={wearing:{...this.state.wearing,...wearing}};}
+      if(p[0]===2){
+        const wearing=pairs(p.slice(1));
+        if(wearing){
+          const before=this.state.wearing;patch={wearing:{...before,...wearing}};
+          // The case reports battery only with its lid open, and opening it does not always push a battery event.
+          const caseVisible=w=>!!(w?.case?.lidOpen||w?.left?.inCase&&w?.left?.lidOpen||w?.right?.inCase&&w?.right?.lidOpen);
+          if(caseVisible(patch.wearing)&&!caseVisible(before)){
+            clearTimeout(this.batteryTimer);
+            this.batteryTimer=setTimeout(()=>{if(this.connected)this.read('battery');},800);
+          }
+        }
+      }
       if(p[0]===3&&p[1]===1&&p[2]===1){try{patch={noise:noise([0,...p.slice(1)])};}catch{}}
       if(p[0]===3&&p[1]===2&&p[2]===1){try{patch={holdCycle:holdCycle([0,...p.slice(1)])};}catch{}}
       if(p[0]===3&&p[1]===4&&p[2]===1){try{patch={smartLevel:smartLevel([0,...p.slice(1)])};}catch{}}
