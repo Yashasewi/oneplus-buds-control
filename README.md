@@ -2,7 +2,9 @@
 
 Web controller for **OnePlus Buds 4**, tested with firmware **138.138.105**, macOS and Google Chrome.
 
-Run `npm start`, then open **http://127.0.0.1:8974/** in normal Chrome. Keep your earbuds connected in macOS and click **Connect earbuds**. A previously granted matching port can be reused; otherwise select your earbuds in the browser chooser. Use **Refresh state** to reread settings and **Disconnect** to close the control connection.
+The new app (React, TypeScript, Tailwind, built with Vite+) is in `app/`: run `pnpm install` once, then `pnpm exec vp dev` inside `app/`. The older dashboard in `web/` stays as a fallback and runs with `npm start`. Both use the same address, so run only one at a time.
+
+Open **http://127.0.0.1:8974/** in normal Chrome. Keep your earbuds connected in macOS and click **Connect earbuds**. A previously granted matching port can be reused; otherwise select your earbuds in the browser chooser.
 
 The page reads battery, wearing status, firmware, noise mode, EQ, gesture/call mappings, feature switches, connected devices, audio codec, BassWave and prompt volume. Battery, wearing and noise events update live. Missing case battery stays unknown; values retained after disconnect are marked as last reads.
 

@@ -60,22 +60,22 @@ Start at login, auto-connect, a global shortcut for the noise cycle, low-battery
 
 1. Scaffold with Vite+ (`vp`) using React and TypeScript, plus Tailwind. Keep the dev server on `127.0.0.1:8974`, since Chrome's granted serial port is tied to that origin.
 2. Move `protocol.js` and `device.js` to `src/lib/` as TypeScript without changing behaviour. Type the state (`DeviceState`) and command builders.
-3. Expose the session through a React context and a `useBuds()` hook with an external store (`useSyncExternalStore`) fed by `state` events.
-4. Rebuild the cards as components: Battery, Noise, Sound, Features, Gestures, Connections, About, Tools, PresetEditor, HearingTest. Keep the current visual design in Tailwind theme tokens.
-5. Keep `serve_web.py` only for `/api/evidence` logging, or replace it with a small Vite+ dev-server middleware. Production is a static build served from localhost.
+3. Expose the session through a `useBuds()` hook with an external store (`useSyncExternalStore`) that publishes immutable snapshots.
+4. Rebuild the UI as components with a new design: a fixed "now" panel (sound field, noise control, battery) and a grouped settings list (Sound, Touch controls, Features, Connections, Tools, About). Each row shows its own pending, confirmed or error state.
+5. `web/` and `serve_web.py` stay as the fallback until `app/` is confirmed on real buds. Production is a static build served from localhost.
+
+Status: done in `app/` (`vp dev` serves it on `127.0.0.1:8974`). Not yet checked against real earbuds.
 
 The web app stays Chrome-only (Web Serial over Bluetooth). Cursor's and other Electron browsers expose the API but do not offer a device chooser.
 
-## Out of scope for both, needing their own investigation
+## Out of scope for both
 
-| Feature | Why it is separate |
+| Feature | Why |
 |---|---|
+| Cloud/account features (AI translation, themes, sign-in) | Skipped by decision. |
+| Ear scan for Golden Sound | Skipped by decision; the hearing test makes the Golden Sound profile without it. |
 | Firmware updates (OTA) | Transfer, verification, resume and recovery are untraced ([U13](heymelody/unknowns.md)); a mistake can brick the buds. |
-| Cloud/account features (AI translation, themes, sign-in) | Server APIs, authentication and permission to use them are unknown ([U12](heymelody/unknowns.md)). |
-| Ear scan for Golden Sound | Not confirmed for Buds 4; the current hearing test applies without it. |
 | Features the buds do not advertise | Tap sensitivity, head gestures, device manager and personalised ANC are absent from the capability bitmap. |
-
-REA is the tool for the first two, starting from the HeyMelody binary's OTA and network code.
 
 ## Open questions
 
