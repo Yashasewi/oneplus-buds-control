@@ -49,7 +49,10 @@ class CapturePort {
     this.readable=new ReadableStream({start:controller=>{this.controller=controller;}});
     this.writable=new WritableStream({write:bytes=>{
       const command=bytes[4]|bytes[5]<<8;this.sent.push(command);
-      let payload=response(command|0x8000);
+      // Reads added after this capture (hold cycle, Smart level, Golden Sound) get a declined status.
+      const selector=bytes[9];
+      let payload=command===0x010c&&selector!==1||!rows.some(r=>r.event==='response'&&r.command===(command|0x8000).toString(16))
+        ?[1]:response(command|0x8000);
       if(command===0x0103&&this.wrongModel)payload=[0,1,2,3];
       if(command===0x0100){payload=[...payload];payload[4]&=~32;} // omit redacted paired-device fixture
       const total=payload.length+7;

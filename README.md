@@ -1,12 +1,14 @@
 # Buds web
 
-First read-only web version for **OnePlus Buds 4**, tested with firmware **138.138.105**, macOS and Google Chrome.
+Web controller for **OnePlus Buds 4**, tested with firmware **138.138.105**, macOS and Google Chrome.
 
 Run `npm start`, then open **http://127.0.0.1:8974/** in normal Chrome. Keep your earbuds connected in macOS and click **Connect earbuds**. A previously granted matching port can be reused; otherwise select your earbuds in the browser chooser. Use **Refresh state** to reread settings and **Disconnect** to close the control connection.
 
 The page reads battery, wearing status, firmware, noise mode, EQ, gesture/call mappings, feature switches, connected devices, audio codec, BassWave and prompt volume. Battery, wearing and noise events update live. Missing case battery stays unknown; values retained after disconnect are marked as last reads.
 
-Setting changes, sounds/tests, resets, firmware updates and cloud features are not enabled. The encoder permits only specific read queries and a temporary event subscription. This is the first feature slice, not complete HeyMelody parity.
+Settings can be changed: noise mode and ANC level, the touch-and-hold noise cycle, EQ presets and custom presets, BassWave, wear detection, game mode, Golden Sound, Hi-Res, OnePlus 3D Audio, gestures and call controls, dual connection and prompt volume. Every change needs the earbuds' acknowledgement and a matching read-back; an acknowledgement alone is reported as unverified. Tools: find my earbuds, fit test and the Golden Sound hearing test. Hi-Res changes restart the earbuds' link and the page reconnects. Write payloads come from QuickBuds' Buds 4 captures and HeyMelody's Buds 4 menus; most are not yet confirmed on this pair.
+
+Firmware updates, resets, pairing, ear scans, codec selection and commands these earbuds do not advertise (tap sensitivity, head gestures, device manager, personalised ANC) are rejected by the encoder's allowlist.
 
 The browser communicates directly through Web Serial RFCOMM. The Python server serves local files and receives optional diagnostic logs; it is not a Bluetooth bridge. Main dashboard data remains in browser memory. `/validation.html` is a separate diagnostic page which saves read-only validation logs locally.
 

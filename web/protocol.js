@@ -1,20 +1,100 @@
-// Protocol facts and provenance: docs/heymelody/{packet-analysis,quickbuds-reference}.md.
+// Protocol facts and provenance: docs/heymelody/{packet-analysis,quickbuds-reference,settings-validation}.md.
 export const SERVICE = '0000079a-d102-11e1-9b23-00025b00a5a5';
 export const MODEL = '065414';
-const READ_COMMANDS = new Set([
-  0x0100, 0x0103, 0x0105, 0x0106, 0x0108, 0x0109, 0x010c,
-  0x010d, 0x010f, 0x0112, 0x0114, 0x0122, 0x0124, 0x0130, 0x0200,
+const isByte = x => Number.isInteger(x) && x >= 0 && x <= 255;
+const same = (p, q) => p.length === q.length && p.every((x, i) => x === q[i]);
+const oneOf = (...forms) => p => forms.some(form => same(p, form));
+const empty = p => !p.length;
+export const s8 = v => v & 255;
+const signed = b => b > 127 ? b - 256 : b;
+const le = bytes => bytes.reduce((value, b, i) => value + b * 2 ** (8 * i), 0);
+function minimalLE(value) {
+  const out = [];
+  do { out.push(value & 255); value = Math.floor(value / 256); } while (value);
+  return out;
+}
+
+// Buds 4 SET bits for 0x0404 01 01; reports use a different table (NOISE_NAMES).
+export const NOISE_SET_BITS = {off:0, anc:1, transparency:2, deep:4, medium:5, light:6, smart:7, adaptive:11};
+const NOISE_SET_ALLOWED = new Set(Object.values(NOISE_SET_BITS));
+export const HOLD_CYCLE_BITS = {off:0, anc:1, transparency:2, adaptive:11};
+const HOLD_CYCLE_MASK = Object.values(HOLD_CYCLE_BITS).reduce((m, b) => m | 1 << b, 0);
+// Switch ids returned by this firmware's 0x010D reply.
+export const SWITCHES = {wearDetection:4, gameMode:6, goldenSound:11, dualConnection:17, hiRes:24, spatial:27, smartVolume:28, bassWave:29};
+const SWITCH_IDS = new Set(Object.values(SWITCHES));
+// Measured Buds 4 function bytes; a whole-table write can carry any of them back unchanged.
+const KNOWN_FUNCTIONS = new Set([0, 1, 3, 5, 6, 7, 8, 10, 11, 12, 17, 28, 29]);
+export const HEARING_STOPS = [-120,-88,-55,-52,-49,-45,-41,-38,-35,-30,-25,-22,-19,-15,-11,-8,-5,-1,3,5,7,10,13,15,17];
+const HEARING_RESULTS = [-55,-49,-41,-35,-25,-19,-11,-5,3,7,13,17];
+export const HEARING_START = 9, HEARING_LOUD = 21;
+export const EQ_BANDS = [62, 250, 1000, 4000, 8000, 16000];
+export const EQ_GAIN = 6, EQ_MAX_CUSTOM = 3;
+
+const validHearingInfo = p => p.length === 36 && Array.from({length:12}, (_, i) => p.slice(i * 3, i * 3 + 3))
+  .every(([side, freq, value], i) => side === Math.floor(i / 6) + 1 && freq === i % 6 + 1 && HEARING_RESULTS.includes(signed(value)));
+const ascii = (p, max = 32) => p.length <= max && p.every(b => b >= 32 && b < 127);
+function validNoiseSet(p) {
+  if (p[0] === 1 && p[1] === 1) {
+    const bit = [...NOISE_SET_ALLOWED].find(b => p.length === 3 + Math.floor(b / 8) && le(p.slice(2)) === 2 ** b);
+    return bit !== undefined;
+  }
+  if (p[0] === 2 && p[1] === 1 && p.length >= 3 && p.length <= 6) {
+    const mask = le(p.slice(2));
+    return mask > 0 && !(mask & ~HOLD_CYCLE_MASK) && same(p.slice(2), minimalLE(mask));
+  }
+  return false;
+}
+function validGestureTable(p) {
+  if (p[0] < 1 || p[0] > 64 || p.length !== 1 + p[0] * 4) return false;
+  for (let i = 1; i < p.length; i += 4) {
+    const [dev, button, action, fn] = p.slice(i, i + 4);
+    if (![1, 2, 4].includes(dev) || button < 1 || button > 6 || action < 1 || action > 6 || !KNOWN_FUNCTIONS.has(fn)) return false;
+  }
+  return true;
+}
+function validCustomEq(p) {
+  if (![1, 2, 3].includes(p[0]) || p[1] !== s8(-EQ_GAIN) || p[2] !== EQ_GAIN) return false;
+  const nameLength = p[4];
+  if (!nameLength || !ascii(p.slice(5, 5 + nameLength), 16)) return false;
+  const count = p[5 + nameLength], bands = p.slice(6 + nameLength);
+  if (count < 1 || count > 10 || bands.length !== count * 3) return false;
+  for (let i = 0; i < bands.length; i += 3) if (Math.abs(signed(bands[i + 2])) > EQ_GAIN) return false;
+  return p[0] === 1 ? p[3] === 0 : p[3] > 2;
+}
+const validTone = p => p.length === 5 && p[0] === 3 && p[1] === 1 && [1, 2].includes(p[2]) && p[3] >= 1 && p[3] <= 6
+  && HEARING_STOPS.includes(signed(p[4]));
+const validRecord = p => p.length >= 42 && p[0] === 3 && p[1] === 12 && validHearingInfo(p.slice(2, 38)) && ascii(p.slice(42));
+
+// Allowlist: every command and payload shape this client may send. Firmware/OTA, resets,
+// pairing, ear scans and anything undocumented for Buds 4 are absent and therefore rejected.
+const COMMANDS = new Map([
+  [0x0100, empty], [0x0103, empty], [0x0105, empty], [0x0106, empty], [0x0108, empty], [0x0109, empty],
+  [0x010c, p => p.length === 2 && [1, 2, 4].includes(p[0]) && p[1] === 1],
+  [0x010d, p => p.length > 1 && p[0] === p.length - 1],
+  [0x010f, empty], [0x0112, empty], [0x0114, empty], [0x0115, empty], [0x0122, empty], [0x0124, empty], [0x0130, empty], [0x0200, empty],
+  [0x0116, p => p.length === 41 && p[0] === 12 && validHearingInfo(p.slice(1, 37))],
+  [0x0205, p => p.length >= 2 && p[0] === p.length - 1 && p.slice(1).every(x => [1, 2, 3, 4, 8].includes(x))
+    && new Set(p.slice(1)).size === p.length - 1],
+  [0x0400, oneOf([0], [1])],
+  [0x0401, p => validGestureTable(p)],
+  [0x0403, p => p.length === 2 && SWITCH_IDS.has(p[0]) && p[1] <= 1],
+  [0x0404, validNoiseSet],
+  [0x0405, oneOf([0], [1])],
+  [0x0406, p => p.length === 1 && p[0] <= 15],
+  [0x040d, oneOf([2, 0], [2, 1])],
+  [0x040e, p => same(p, [4]) || validTone(p) || validRecord(p)],
+  [0x0411, p => p.length === 5 && same(p.slice(0, 4), [1, 1, 1, 0]) && p[4] > 0],
+  [0x0413, oneOf([8, 0, 0], [8, 0, 1])],
+  [0x0418, validCustomEq],
+  [0x041b, p => p.length === 3 && p[0] === 0xfb && p[1] === 5 && Math.abs(signed(p[2])) <= 5],
+  [0x0427, p => p.length === 1 && p[0] >= 1 && p[0] <= 10],
 ]);
-// 0205 registers session events only. No persistent-setting or test commands.
 export function encode(command, sequence, payload = []) {
-  if (!READ_COMMANDS.has(command) && command !== 0x0205) throw Error('Command outside read-only scope');
+  const valid = COMMANDS.get(command);
+  if (!valid) throw Error('Command outside allowed scope');
   if (!Number.isInteger(sequence) || sequence < 1 || sequence > 254) throw Error('Invalid sequence');
-  if (!Array.isArray(payload) || payload.length > 512 || payload.some(x => !Number.isInteger(x) || x < 0 || x > 255)) throw Error('Invalid payload');
-  if (command === 0x0205 && (payload[0] !== payload.length - 1 || payload.length < 2
-    || payload.slice(1).some(x => ![1, 2, 3].includes(x)) || new Set(payload.slice(1)).size !== payload.length - 1)) throw Error('Invalid event subscription');
-  if ([0x0100,0x0103,0x0105,0x0106,0x0108,0x0109,0x010f,0x0112,0x0114,0x0122,0x0124,0x0130,0x0200].includes(command) && payload.length) throw Error('Unexpected query payload');
-  if (command === 0x010c && !(payload.length === 2 && [1, 2, 4].includes(payload[0]) && payload[1] === 1)) throw Error('Invalid noise query');
-  if (command === 0x010d && (payload[0] !== payload.length - 1 || !payload.length)) throw Error('Invalid feature query');
+  if (!Array.isArray(payload) || payload.length > 512 || !payload.every(isByte)) throw Error('Invalid payload');
+  if (!valid(payload)) throw Error(`Invalid payload for ${command.toString(16).padStart(4, '0')}`);
   let size = 7 + payload.length, length = [];
   do { const byte = size & 127; size = Math.floor(size / 128); length.push(byte | (size ? 128 : 0)); } while (size);
   return Uint8Array.from([0xaa, ...length, 0, 0, command & 255, command >> 8, sequence, payload.length & 255, payload.length >> 8, ...payload]);
@@ -48,6 +128,17 @@ export function requireSuccess(p, minimum = 1) {
   if (p.length < minimum) throw Error('Incomplete reply');
   if (p[0] !== 0) throw Error(`Device declined query (status ${p[0]})`);
 }
+export class RefusedError extends Error {
+  constructor(command, status) {
+    super(status === 14 ? 'Put at least one earbud in your ear, then try again.' : `The earbuds refused the change (status ${status}).`);
+    this.command = command; this.status = status;
+  }
+}
+export function acknowledged(command, p) {
+  if (!p.length) throw Error('Empty acknowledgement');
+  if (p[0] !== 0) throw new RefusedError(command, p[0]);
+  return p;
+}
 export function pairs(p, {status = false, battery = false} = {}) {
   const offsets = status ? [1] : [0, 1];
   for (const offset of offsets) {
@@ -67,23 +158,60 @@ export function pairs(p, {status = false, battery = false} = {}) {
   }
   return null;
 }
-const CAP_BITS = new Map([[0x0105,0],[0x0108,3],[0x0109,4],[0x010c,8],[0x010f,10],
-  [0x0112,29],[0x0114,17],[0x0122,34],[0x0124,38],[0x0130,57],[0x0205,22]]);
+// Bit n of the 0x8100 bitmap enables these commands (QuickBuds desktop/src/protocol.rs BIT_COMMANDS).
+const BIT_COMMANDS = [
+  [0x0105],[0x0106],[0x0107],[0x0108,0x0401,0x0416],[0x0109],[0x0400],[0x0402],[0x0403],
+  [0x010c,0x0404],[0x0405],[0x0406,0x010f],[0x0407],[],[0x0408],[0x0409],[],[],
+  [0x0114],[],[0x040e,0x040d,0x0115,0x0116],[0x040f],[0x0410,0x0119],[0x0205],[0x0f00],
+  [],[0x0118,0x0411],[0x011a,0x0412],[0x011c,0x0413],[],[0x0112,0x040b],
+  [0x011e,0x011f,0x0415],[0x040d],[],[0x0121,0x0417],[0x0122,0x0418],[],
+  [0x011d,0x0414],[0x0123,0x041a],[0x0124,0x041b],[0x0125,0x041c,0x0127,0x041d,0x041f],
+  [0x0421,0x0023,0x0024,0x0022,0x0126,0x0129],[0xef01],[0xef02],[0xef03,0x041e],[0x0420],
+  [0x001c],[],[0x0422,0x012a],[0xef04],[0x0423,0x012b],[],[0x0424],[0xef06],[],[],
+  [0x0425,0x012e,0x0426],[0x012f],[0x0427,0x0130],[0x0131,0x0428],[0x0429,0x0132],[0x0014],
+  [0x042d,0x0133],[0x042e],[0xef07],[0xef08],[0xef09],[0x0431,0x0134],
+];
+const ALWAYS = new Set([0x0100,0x0101,0x0102,0x0103,0x0104,0x0106,0x010b,0x010d,0x0200,0x0f00,0x0f03,0x0f04]);
 export function capabilities(p) {
   requireSuccess(p, 2);
-  return {bitmap:p.slice(1), supports(command) {
-    const bit = CAP_BITS.get(command);
-    return bit === undefined ? READ_COMMANDS.has(command) : !!(p[1 + Math.floor(bit / 8)] & 1 << (bit % 8));
-  }};
+  const offered = new Set(ALWAYS);
+  for (let bit = 0; bit < Math.min((p.length - 1) * 8, BIT_COMMANDS.length); bit++)
+    if (p[1 + (bit >> 3)] >> (bit & 7) & 1) BIT_COMMANDS[bit].forEach(c => offered.add(c));
+  return {bitmap:p.slice(1), supports:command => offered.has(command)};
 }
 export const NOISE_NAMES = new Map([[8,'Off'],[2,'Noise cancellation'],[16,'ANC · Deep'],[32,'ANC · Medium'],
   [64,'ANC · Light'],[128,'ANC · Smart'],[256,'Transparency'],[512,'Voice transparency'],[2048,'Adaptive']]);
+// What 0x810C 01 01 reports after each SET; any ANC level satisfies a plain 'anc' SET.
+export const NOISE_REPORTS = {off:[8], transparency:[256, 512], adaptive:[2048], deep:[16], medium:[32], light:[64], smart:[128], anc:[2, 16, 32, 64, 128]};
+export function noiseModeOf(raw) { return Object.entries(NOISE_REPORTS).find(([mode, raws]) => mode !== 'anc' && raws.includes(raw))?.[0] ?? (raw === 2 ? 'anc' : null); }
 export function noise(p) {
   requireSuccess(p, 4);
   if (p[1] !== 1 || p[2] !== 1 || p.length > 7) throw Error('Unrecognized noise reply');
-  const raw = p.slice(3).reduce((value,b,i) => value + b * 2 ** (8 * i), 0);
-  return {raw, name:NOISE_NAMES.get(raw) ?? 'Unrecognized mode'};
+  const raw = le(p.slice(3));
+  return {raw, mode:noiseModeOf(raw), name:NOISE_NAMES.get(raw) ?? 'Unrecognized mode'};
 }
+export function holdCycle(p) {
+  requireSuccess(p, 4);
+  if (p[1] !== 2 || p[2] !== 1 || p.length > 7) throw Error('Unrecognized hold-cycle reply');
+  const mask = le(p.slice(3));
+  return {mask, modes:Object.keys(HOLD_CYCLE_BITS).filter(m => mask & 1 << HOLD_CYCLE_BITS[m])};
+}
+export function smartLevel(p) {
+  requireSuccess(p, 4);
+  if (p[1] !== 4 || p[2] !== 1 || p.length > 7) throw Error('Unrecognized Smart level reply');
+  const mask = le(p.slice(3));
+  return Object.entries(NOISE_SET_BITS).find(([, bit]) => mask === 2 ** bit)?.[0] ?? null;
+}
+export const noiseModePayload = mode => {
+  const bit = NOISE_SET_BITS[mode];
+  if (bit === undefined) throw Error('Unknown noise mode');
+  return [1, 1, ...minimalLE(2 ** bit)];
+};
+export const holdCycleMask = modes => modes.reduce((mask, mode) => {
+  if (HOLD_CYCLE_BITS[mode] === undefined) throw Error('Unknown hold-cycle mode');
+  return mask | 1 << HOLD_CYCLE_BITS[mode];
+}, 0);
+export const holdCyclePayload = modes => [2, 1, ...minimalLE(holdCycleMask(modes))];
 export function featureStates(p) {
   requireSuccess(p,2);
   if (p.length !== 2 + p[1] * 2) throw Error('Invalid feature count');
@@ -98,17 +226,38 @@ export const ACTIONS = {1:'Single tap',2:'Double tap',3:'Triple tap',4:'Touch an
 export const FUNCTIONS = {0:'No action',1:'Play / pause',3:'Voice assistant',5:'Previous track',6:'Next track',
   7:'Volume',8:'Noise control',10:'Switch tracks',11:'Volume up',12:'Volume down',13:'Switch devices',
   17:'Game mode',28:'Decline call',29:'Answer / end call'};
+// HeyMelody's Buds 4 menus (oneplus-buds-4.md "Controls"), mapped to measured function bytes.
+export const GESTURE_MENUS = {1:[0,1], 2:[0,1,5,6,3,17], 3:[0,5,6,3,17], 4:[0,8], 5:[0,7,10]};
+export const CALL_MENUS = {2:[0,29], 6:[0,28]};
+const SIDES = {1:'Left',2:'Right',4:'Both'};
 export function gestures(p) {
   requireSuccess(p,2);
   if (p[1] > 64 || p.length !== 2 + p[1] * 4) throw Error('Invalid gesture table');
   const entries = [];
   for (let i=2;i<p.length;i+=4) {
-    const [side,button,action,fn] = p.slice(i,i+4);
-    if (![1,2,4].includes(side)) throw Error('Invalid gesture side');
-    entries.push({side:({1:'Left',2:'Right',4:'Both'})[side],button,action,fn,
+    const [device,button,action,fn] = p.slice(i,i+4);
+    if (!SIDES[device]) throw Error('Invalid gesture side');
+    entries.push({device,side:SIDES[device],button,action,fn,
       actionName:ACTIONS[action] ?? 'Other gesture',functionName:FUNCTIONS[fn] ?? 'Other function'});
   }
   return entries;
+}
+// Writes every slot the table has for (side, action) outside the call group; the table's shape
+// varies between reads, so slots are never hardcoded.
+export function gestureTablePayload(table, side, action, fn) {
+  if (!GESTURE_MENUS[action]?.includes(fn)) throw Error('Function not offered for this gesture');
+  const device = side === 'Left' ? 1 : side === 'Right' ? 2 : 0;
+  let matched = 0;
+  const entries = table.map(e => {
+    if (e.device === device && e.action === action && e.button !== 6) { matched++; return [e.device, e.button, e.action, fn]; }
+    return [e.device, e.button, e.action, e.fn];
+  });
+  if (!matched) throw Error('This gesture is not in the earbuds’ current table');
+  return [entries.length, ...entries.flat()];
+}
+export function callGesturePayload(action, fn) {
+  if (!CALL_MENUS[action]?.includes(fn)) throw Error('Function not offered for this call control');
+  return [1, 4, 6, action, fn];
 }
 export function customPresets(p) {
   requireSuccess(p,2);
@@ -121,11 +270,25 @@ export function customPresets(p) {
     const name=new TextDecoder().decode(Uint8Array.from(p.slice(cursor,cursor+nameLength)));cursor+=nameLength;
     const count=p[cursor++]; if (count>16 || cursor+count*3>p.length) throw Error('Truncated preset bands');
     const bands=[];
-    for(let b=0;b<count;b++){ const frequency=p[cursor]|p[cursor+1]<<8,g=p[cursor+2];cursor+=3;bands.push({frequency,gain:g>127?g-256:g}); }
-    result.push({id,name,selected:selected===1,range:[lo>127?lo-256:lo,hi>127?hi-256:hi],bands});
+    for(let b=0;b<count;b++){ const frequency=p[cursor]|p[cursor+1]<<8,g=p[cursor+2];cursor+=3;bands.push({frequency,gain:signed(g)}); }
+    result.push({id,name,selected:selected===1,range:[signed(lo),signed(hi)],bands});
   }
   if(cursor!==p.length) throw Error('Unexpected preset suffix');
   return result;
+}
+export const CUSTOM_EQ = {create:1, save:2, delete:3};
+export function customEqPayload(action, {id = 0, name, bands}) {
+  const code = CUSTOM_EQ[action];
+  if (!code) throw Error('Unknown preset action');
+  const text = Array.from(new TextEncoder().encode(name));
+  return [code, s8(-EQ_GAIN), EQ_GAIN, action === 'create' ? 0 : id, text.length, ...text, bands.length,
+    ...bands.flatMap(({frequency, gain}) => [frequency & 255, frequency >> 8, s8(gain)])];
+}
+export const bassPayload = level => [0xfb, 5, s8(level)];
+export function bassLevel(p) {
+  requireSuccess(p,4);
+  if (p.length !== 4 || p[1] !== 0xfb || p[2] !== 5) throw Error('Invalid BassWave reply');
+  return signed(p[3]);
 }
 export function connectedDevices(p) {
   requireSuccess(p,2);
@@ -150,4 +313,33 @@ export function firmware(p) {
   for(let i=0;i<parts.length;i+=3)if(parts[i+1].trim()==='2')versions.push(parts[i+2].trim());
   if(!versions.length || versions.some(x=>!/^\d+$/.test(x)))throw Error('Unrecognized firmware version');
   return versions.join('.');
+}
+// Fit test push 04 <dev> <status> <dev> <status>: 1 good, 0 average, 6 poor, other values are errors.
+export function fitResult(p) {
+  const result = {};
+  for (let i = 0; i + 1 < p.length; i += 2) {
+    const side = {1:'left',2:'right'}[p[i]];
+    if (side) result[side] = {1:'Good fit',0:'Average fit',6:'Poor fit'}[p[i + 1]] ?? 'Could not measure';
+  }
+  return result;
+}
+// Golden Sound hearing values: left 1..6 then right 1..6, each <side> <freq> <value>.
+export const hearingSnap = v => HEARING_RESULTS.reduce((best, r) => Math.abs(r - v) < Math.abs(best - v) ? r : best);
+const hearingInfo = values => values.flatMap((v, i) => [Math.floor(i / 6) + 1, i % 6 + 1, s8(v)]);
+const be32 = n => [n >>> 24 & 255, n >>> 16 & 255, n >>> 8 & 255, n & 255];
+export const tonePayload = (side, freq, value) => [3, 1, side, freq, s8(value)];
+export const hearingFilterPayload = (uid, values) => [12, ...hearingInfo(values), ...be32(uid)];
+export const hearingRecordPayload = (uid, name, values) => [3, 12, ...hearingInfo(values), ...be32(uid), ...Array.from(new TextEncoder().encode(name))];
+export function hearingEnhanceType(p) {
+  requireSuccess(p, 10);
+  if (p[5] !== 4) throw Error('Unrecognized hearing filter reply');
+  return p[9];
+}
+export function goldenRecord(p) {
+  requireSuccess(p, 3);
+  if (p[1] !== 3 || p[2] !== 12 || p.length < 43) return null;
+  const values = [];
+  for (let i = 3; i < 39; i += 3) values.push(signed(p[i + 2]));
+  return {values, uid:(p[39] << 24 | p[40] << 16 | p[41] << 8 | p[42]) >>> 0,
+    name:new TextDecoder().decode(Uint8Array.from(p.slice(43)))};
 }

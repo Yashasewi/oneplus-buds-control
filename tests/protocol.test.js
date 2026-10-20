@@ -27,12 +27,13 @@ test('capture battery and capability bitmap remain consistent',()=>{
   assert.equal(caps.supports(0x010c),true);
   assert.equal(caps.supports(0x0122),true);
 });
-test('all mutation/test/firmware groups rejected, including unknown commands',()=>{
+test('commands outside the allowlist are rejected, including firmware and undocumented writes',()=>{
   for(let cmd=0;cmd<=65535;cmd++){
-    if([0x0100,0x0103,0x0105,0x0106,0x0108,0x0109,0x010c,0x010d,0x010f,0x0112,0x0114,0x0122,0x0124,0x0130,0x0200,0x0205].includes(cmd))continue;
+    if([0x0100,0x0103,0x0105,0x0106,0x0108,0x0109,0x010c,0x010d,0x010f,0x0112,0x0114,0x0115,0x0116,0x0122,0x0124,0x0130,0x0200,0x0205,
+      0x0400,0x0401,0x0403,0x0404,0x0405,0x0406,0x040d,0x040e,0x0411,0x0413,0x0418,0x041b,0x0427].includes(cmd))continue;
     assert.throws(()=>encode(cmd,1));
   }
-  assert.throws(()=>encode(0x0205,1,[1,4]));
+  assert.throws(()=>encode(0x0205,1,[1,11]));
   assert.throws(()=>encode(0x0205,1,[2,1,1]));
   assert.throws(()=>encode(0x010c,1,[2,3]));
   assert.throws(()=>encode(0x0100,1,[0]));
