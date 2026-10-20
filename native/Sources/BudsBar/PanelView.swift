@@ -120,7 +120,11 @@ struct BatteryGauge: View {
     return percent <= 15 ? .red : .primary
   }
   private var note: String {
-    if part == .chargingCase { return wear?.lidOpen == true ? "Lid open" : level?.percent == nil ? "Open lid" : "Case" }
+    if part == .chargingCase {
+      // The case reports its battery only with the lid open and a bud inside.
+      if level?.percent != nil { return "Case" }
+      return wear?.lidOpen == true ? "Put a bud in" : "Open the lid"
+    }
     guard let wear else { return part.label }
     return wear.inEar ? "\(part.label), in ear" : wear.inCase ? "\(part.label), in case" : part.label
   }
@@ -169,6 +173,7 @@ struct NoiseControl: View {
       HStack(alignment: .top, spacing: 6) {
         ForEach(Group.allCases, id: \.self) { group in
           Button {
+            guard current != group else { return }
             Task { await session.setNoise(group.mode) }
           } label: {
             VStack(spacing: 6) {
@@ -187,7 +192,7 @@ struct NoiseControl: View {
             .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
-          .disabled(session.busy || current == group)
+          .disabled(session.busy)
           .accessibilityAddTraits(current == group ? .isSelected : [])
         }
       }
