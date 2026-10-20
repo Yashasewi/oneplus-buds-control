@@ -47,7 +47,7 @@ T3's collaborative browser was used for UI inspection and left/right-tab checks.
 
 T3 viewport-resize calls timed out. Desktop UI was inspected directly; mobile CSS was additionally inspected with a temporary 390-pixel page width and the mobile media rules enabled. The single-column layout had no content beyond that width. This is a simulated layout check, not a mobile browser hardware test. Captured-state UI replay was explicitly marked as a test and removed before handoff.
 
-`npm test` covers 12 cases: known hardware packets, every split boundary, byte-at-a-time reply parsing, multi-byte length encoding, malformed frames/payloads, read-only opcode enforcement, live-event replay, reconnect/stream-lock cleanup and model rejection before feature queries. Host-device decoding uses a synthetic privacy-safe fixture because its raw capture was intentionally omitted.
+The first build's `npm test` (removed with the old `web/` dashboard; see git history) covered 12 cases: known hardware packets, every split boundary, byte-at-a-time reply parsing, multi-byte length encoding, malformed frames/payloads, read-only opcode enforcement, live-event replay, reconnect/stream-lock cleanup and model rejection before feature queries. Host-device decoding uses a synthetic privacy-safe fixture because its raw capture was intentionally omitted.
 
 ## Next stages
 

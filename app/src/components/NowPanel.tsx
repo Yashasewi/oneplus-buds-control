@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ANC_LEVELS, type AncLevel, type NoiseMode, type Side } from "../lib/protocol";
-import { run, session, useAction, useBuds } from "../lib/store";
+import { connect, disconnect, run, session, useAction, useBuds } from "../lib/store";
 import { SoundField } from "./SoundField";
 import { Button, Segmented, Status, cx } from "./ui";
 
@@ -37,10 +37,10 @@ export function NowPanel() {
   const mode = state.noise?.mode;
   const group = groupOf(mode);
 
-  async function connect() {
+  async function onConnect() {
     setConnectError(undefined);
     try {
-      await session.connect(await session.choose());
+      await connect();
     } catch (error) {
       if ((error as Error).name !== "NotFoundError") setConnectError((error as Error).message);
     }
@@ -122,13 +122,13 @@ export function NowPanel() {
             variant="primary"
             className="h-12 w-full text-base"
             disabled={connection === "connecting" || connection === "restarting"}
-            onClick={connect}
+            onClick={onConnect}
           >
             {connection === "connecting" ? "Connecting…" : "Connect earbuds"}
           </Button>
           {(connectError || (connection === "disconnected" && reason)) && (
             <p className="rounded-xl bg-amber/15 px-3 py-2 text-[0.88rem] text-warn">
-              {connectError ?? reason}
+              {(connection === "disconnected" && reason) || connectError}
             </p>
           )}
         </div>
@@ -141,7 +141,7 @@ export function NowPanel() {
           <Button disabled={busy} onClick={() => run("refresh", () => session.refresh())}>
             Read again
           </Button>
-          <Button onClick={() => session.close("You disconnected.")}>Disconnect</Button>
+          <Button onClick={disconnect}>Disconnect</Button>
         </div>
       )}
     </div>

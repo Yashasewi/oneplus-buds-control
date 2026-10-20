@@ -1,6 +1,6 @@
 # Plan: native menu-bar app and Vite+ web app
 
-Two clients for OnePlus Buds 4 (`065414`, firmware 138.138.105), both built on the protocol already proven in Chrome (`web/protocol.js`, `web/device.js`): every setting change is acknowledged and read back, and live battery, wearing and noise events arrive.
+Two clients for OnePlus Buds 4 (`065414`, firmware 138.138.105), both built on the protocol already proven in Chrome (`app/src/lib/protocol.ts`, `app/src/lib/session.ts`): every setting change is acknowledged and read back, and live battery, wearing and noise events arrive.
 
 1. **Native macOS menu-bar app** (Swift, SwiftUI): an AirPods-style top-bar control.
 2. **Web app** moved to Vite+, React, TypeScript and Tailwind, keeping today's behaviour.
@@ -19,7 +19,8 @@ To keep the two implementations in agreement without sharing code across languag
 |---|---|---|
 | UI | SwiftUI `MenuBarExtra` with `.window` style, macOS 13+ | Native top-bar panel like the AirPods menu; rich layout, not just a menu list. |
 | Bluetooth | `IOBluetooth` RFCOMM | The same classic-Bluetooth service Chrome reaches through Web Serial (`0000079A-D102-11E1-9B23-00025B00A5A5`). |
-| Protocol | Swift package `BudsKit`: framer, encoder/allowlist, decoders, `BudsSession` actor | A direct port of `protocol.js`/`device.js`; testable without the UI. |
+| Protocol | Swift package `BudsKit`: framer, encoder/allowlist, decoders, `BudsSession` actor | A direct port of `protocol.ts`/`session.ts`; testable without the UI. |
+| Music volume | CoreAudio (`kAudioHardwareServiceDeviceProperty_VirtualMainVolume` on the buds' output device) | The earbuds' protocol has no media-volume command; the Mac owns it. Browsers can't set it. |
 | Login item | `SMAppService.mainApp` | Starts at login, no helper app. |
 | Shortcuts | `KeyboardShortcuts`-style global hotkey (or `NSEvent` monitor) | Cycle noise mode without opening the panel. |
 | Distribution | Ad-hoc signed for personal use; Developer ID and notarization only if shared | Avoids App Store sandbox limits on Bluetooth while personal. |
@@ -39,6 +40,7 @@ Info.plist needs `NSBluetoothAlwaysUsageDescription`. If sandboxed, add the `com
 
 - **Menu-bar icon:** buds glyph plus the lower of the two bud levels; a charging bolt while charging. Hidden levels show as no number, never a stale one without marking.
 - **Panel, top:** left, right and case battery rings (case only when reported), connection state.
+- **Panel, volume:** a music-volume slider for the buds' output device, kept in sync when volume changes elsewhere.
 - **Panel, controls:** noise mode segmented control (Off, Noise cancelling, Transparency, Adaptive) with ANC level beneath; EQ preset picker; BassWave; quick toggles (game mode, 3D Audio, wear detection).
 - **Settings window** (opened from the panel): gestures per ear and call controls, touch-and-hold noise cycle, custom EQ editor, dual connection, Hi-Res, prompt volume, Golden Sound, fit test, find my earbuds, hearing test.
 - **On connect:** a small floating card near the menu bar with the battery levels, dismissing itself after a few seconds. This approximates the AirPods pop-up; the real case-open animation is a private Apple feature and is not possible.
@@ -62,9 +64,9 @@ Start at login, auto-connect, a global shortcut for the noise cycle, low-battery
 2. Move `protocol.js` and `device.js` to `src/lib/` as TypeScript without changing behaviour. Type the state (`DeviceState`) and command builders.
 3. Expose the session through a `useBuds()` hook with an external store (`useSyncExternalStore`) that publishes immutable snapshots.
 4. Rebuild the UI as components with a new design: a fixed "now" panel (sound field, noise control, battery) and a grouped settings list (Sound, Touch controls, Features, Connections, Tools, About). Each row shows its own pending, confirmed or error state.
-5. `web/` and `serve_web.py` stay as the fallback until `app/` is confirmed on real buds. Production is a static build served from localhost.
+5. Connect automatically to the already-granted port on load and when the buds come back; re-read settings when the tab regains focus.
 
-Status: done in `app/` (`vp dev` serves it on `127.0.0.1:8974`). Not yet checked against real earbuds.
+Status: done in `app/` (`vp dev` serves it on `127.0.0.1:8974`); the old `web/` dashboard has been removed.
 
 The web app stays Chrome-only (Web Serial over Bluetooth). Cursor's and other Electron browsers expose the API but do not offer a device chooser.
 

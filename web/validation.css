@@ -1,6 +1,0 @@
-:root{font-family:system-ui;color:#202124;background:#f4f5f7}
-body{margin:0}main{max-width:840px;margin:50px auto;padding:0 24px}
-h1{font-size:42px;letter-spacing:-1.5px}p{line-height:1.6}.eyebrow{font-size:12px;font-weight:700;letter-spacing:2px}
-button{padding:13px 20px;border:0;border-radius:8px;font:inherit;background:#21242b;color:white;margin:8px 8px 8px 0;cursor:pointer}
-button:disabled{opacity:.4;cursor:default}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:24px;border-radius:12px}
-#status{font-weight:600}summary{cursor:pointer}

@@ -13,7 +13,7 @@ interface SerialPortRequestOptions {
   allowedBluetoothServiceClassIds?: string[];
   filters?: { bluetoothServiceClassId?: string }[];
 }
-interface Serial {
+interface Serial extends EventTarget {
   getPorts(): Promise<SerialPort[]>;
   requestPort(options?: SerialPortRequestOptions): Promise<SerialPort>;
 }

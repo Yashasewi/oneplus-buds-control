@@ -149,6 +149,7 @@ export class BudsSession {
   private hearingListeners = new Set<(status: number) => void>();
   private log: Log;
   connected = false;
+  lastRefresh = 0;
   subscribed: number[] = [];
   snapshot: Snapshot = { connection: "idle", live: false, state: { errors: {} } };
 
@@ -179,24 +180,44 @@ export class BudsSession {
     return !!this.caps?.supports(command);
   }
 
+  // A port this origin was already granted; opening it needs no click.
+  async grantedPort() {
+    const matches = ((await navigator.serial?.getPorts()) ?? []).filter(
+      (port) => port.getInfo().bluetoothServiceClassId?.toLowerCase() === SERVICE,
+    );
+    return matches.length === 1 ? matches[0] : null;
+  }
   async choose() {
     const serial = navigator.serial;
     if (!serial) throw Error("Open this page in Google Chrome to connect your earbuds.");
-    const matches = (await serial.getPorts()).filter(
-      (port) => port.getInfo().bluetoothServiceClassId?.toLowerCase() === SERVICE,
+    return (
+      (await this.grantedPort()) ??
+      serial.requestPort({
+        allowedBluetoothServiceClassIds: [SERVICE],
+        filters: [{ bluetoothServiceClassId: SERVICE }],
+      })
     );
-    if (matches.length === 1) return matches[0];
-    return serial.requestPort({
-      allowedBluetoothServiceClassIds: [SERVICE],
-      filters: [{ bluetoothServiceClassId: SERVICE }],
-    });
   }
-  async connect(port: SerialPort) {
+  async connect(port: SerialPort, { quiet = false } = {}) {
     if (this.connected || this.reader) throw Error("Already connected");
     if (this.closing) await this.closing;
     if (!this.expectDrop) this.publish({ connection: "connecting", reason: undefined });
     this.port = port;
-    await port.open({ baudRate: 9600 });
+    try {
+      await port.open({ baudRate: 9600 });
+    } catch (error) {
+      if (!this.expectDrop)
+        this.publish(
+          quiet
+            ? { connection: "idle", reason: undefined }
+            : {
+                connection: "disconnected",
+                reason:
+                  "Couldn’t reach the earbuds. Check they are connected to this Mac in Bluetooth settings, then try again.",
+              },
+        );
+      throw error;
+    }
     this.connected = true;
     this.snapshot = { ...this.snapshot, live: false, state: { errors: {} } };
     const generation = ++this.generation;
@@ -450,6 +471,7 @@ export class BudsSession {
   }
   async refresh() {
     if (!this.connected) throw Error("Connect first");
+    this.lastRefresh = Date.now();
     for (const field of REFRESH) await this.read(field);
   }
   private async reread<F extends Field>(field: F): Promise<DeviceState[F]> {

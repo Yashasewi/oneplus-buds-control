@@ -9,6 +9,45 @@ export function useBuds() {
   return useSyncExternalStore(session.subscribe, session.getSnapshot);
 }
 
+// After the user presses Disconnect, stay disconnected until they connect again.
+let userDisconnected = false;
+export async function connect() {
+  userDisconnected = false;
+  await session.connect(await session.choose());
+}
+export function disconnect() {
+  userDisconnected = true;
+  void session.close("You disconnected.");
+}
+async function autoConnect() {
+  const { connection } = session.snapshot;
+  if (
+    userDisconnected ||
+    session.connected ||
+    connection === "connecting" ||
+    connection === "restarting"
+  )
+    return;
+  const port = await session.grantedPort();
+  if (port) await session.connect(port, { quiet: true }).catch(() => {});
+}
+// Only some changes are pushed by the earbuds; others (gestures, switches changed on the phone) need a read.
+function rereadOnReturn() {
+  if (document.visibilityState !== "visible" || !session.connected || action.phase === "pending")
+    return;
+  if (Date.now() - session.lastRefresh < 15000) return;
+  void session.refresh().catch(() => {});
+}
+let started = false;
+export function startBackground() {
+  if (started) return;
+  started = true;
+  void autoConnect();
+  navigator.serial?.addEventListener("connect", () => void autoConnect());
+  document.addEventListener("visibilitychange", rereadOnReturn);
+  window.addEventListener("focus", rereadOnReturn);
+}
+
 // One change at a time: a write and its read-back must not interleave with another write.
 export type Phase = "pending" | "done" | "error";
 export interface ActionState {
