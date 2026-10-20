@@ -2,30 +2,30 @@ import AppKit
 import BudsKit
 import SwiftUI
 
-// One session for the app's lifetime. (Not @State: SwiftUI's macros need Xcode, and this builds with the
+// Long-lived objects as globals. (Not @State: SwiftUI's macros need Xcode, and this builds with the
 // Command Line Tools; @Observable tracking works through plain references.)
 @MainActor let sharedSession = BudsSession()
+@MainActor let outputAudio = OutputAudio()
+@MainActor let appPrefs = AppPrefs()
+@MainActor let companion = Companion(session: sharedSession, prefs: appPrefs)
 
 @main
 struct BudsBarApp: App {
-  private let session = sharedSession
-
   init() {
-    DispatchQueue.main.async { sharedSession.start() }
+    DispatchQueue.main.async {
+      sharedSession.start()
+      outputAudio.start()
+      companion.start()
+    }
   }
 
   var body: some Scene {
     MenuBarExtra {
-      PanelView(session: session)
+      PanelView(session: sharedSession, model: panelModel, audio: outputAudio, prefs: appPrefs)
     } label: {
-      MenuBarLabel(session: session)
+      MenuBarLabel(session: sharedSession)
     }
     .menuBarExtraStyle(.window)
-
-    Window("OnePlus Buds", id: "settings") {
-      SettingsView(session: session)
-    }
-    .windowResizability(.contentMinSize)
   }
 }
 
