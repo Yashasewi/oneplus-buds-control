@@ -34,7 +34,7 @@ The log may include subsequent sessions, embedded-browser rejection and chooser 
 
 Chrome browser-control selection returned unavailable, with no browser connections. Its native-messaging manifest was absent; a protected Chrome Local State diagnostic was inaccessible. No browser protection was bypassed or extension/native-host installation altered.
 
-The [browser-control skill](/Users/yash/.codex/plugins/cache/openai-bundled/browser/26.818.21641/skills/control-in-app-browser/SKILL.md) and its troubleshooting documentation require reporting unavailable Chrome control rather than substituting unrelated automation. The user therefore performed chooser selection in installed Chrome. T3 was not substituted as the target browser.
+Browser-control automation was unavailable, so the chooser was confirmed in installed Chrome instead of a substitute browser.
 
 ## Diagnostic harness
 

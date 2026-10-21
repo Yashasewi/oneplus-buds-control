@@ -59,7 +59,7 @@ An inferred flow is: eligible connected/worn earbuds → microphone/consent/acco
 
 ## Newer neck health module
 
-RES-004 explicitly sets `neckHealth=1` only on hidden model entries `067814` OnePlus Buds Pro 4 and `06EC10` OPPO Enco X4. This is a bundled configuration observation, not confirmed current eligibility or proof no other model can enable it via runtime capability/server update.
+The bundled configuration turns neck health on for some hidden model entries. That is not confirmed eligibility for OnePlus Buds 4, and it is not proof that a capability or server update cannot enable it on another model.
 
 RES-002 has calibration guidance, posture monitoring, pressure/fatigue reminders, mobility assessment and history, exercise videos, angle results, symmetry results, failure/retry and interruption states. The data disclosure string `melody_ui_data_collect_health_illustrate` explicitly describes an IMU (gyroscope + accelerometer), six neck-angle directions, posture durations and calibration time. Poor-posture reminders mention 10–20 consecutive minutes, prompt tone and phone notification. Bundled webp/JSON assets correspond to preparation and six directions, but asset names alone are not proof of runtime sequence.
 

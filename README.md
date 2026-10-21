@@ -1,14 +1,32 @@
 # OpenBuds
 
-Controllers for **OnePlus Buds 4**, tested with firmware **138.138.105** on macOS. There are two: **OpenBuds**, a native Mac menu-bar app (`native/`), and a web app for Google Chrome (`app/`). Both talk to the earbuds directly over Bluetooth RFCOMM; there is no server.
+Local controllers for **OnePlus Buds 4**. A macOS menu-bar app and a Chrome page talk to the earbuds from this computer. There is no account and no cloud service inside the earbuds' link.
 
-## OpenBuds (Mac menu-bar app)
+![OpenBuds menu bar panel](docs/panel.png)
 
-A menu-bar panel in the macOS Liquid Glass style: battery for both earbuds and the case, noise control, the Mac's volume, and pages for Sound, Controls, Features and Tools. It also shows a card when the earbuds connect and notifies you at 20% and 10% battery.
+[![macOS 26+](https://img.shields.io/badge/macOS-26%2B-black)](https://github.com/Yashasewi/oneplus-buds-control/releases/latest)
+[![GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+[![Download](https://img.shields.io/badge/download-OpenBuds.dmg-brightgreen)](https://github.com/Yashasewi/oneplus-buds-control/releases/latest/download/OpenBuds.dmg)
 
-### Install
+## Install the Mac app
 
-You need macOS 26 or later and Xcode (from the App Store). The build script uses `/Applications/Xcode.app` by itself; you do not need to run `xcode-select`.
+1. Download [OpenBuds.dmg](https://github.com/Yashasewi/oneplus-buds-control/releases/latest/download/OpenBuds.dmg) (Apple silicon, macOS 26 or later).
+2. Open the disk image and drag **OpenBuds** to **Applications**.
+3. Open OpenBuds. macOS says it could not verify the app. The build is ad-hoc signed so the file is intact, and it is not notarized with an Apple Developer ID. Click **Done**, then open **System Settings → Privacy & Security** and click **Open Anyway**. macOS remembers that choice. Right-click **Open** does not skip this warning on macOS 15 or later. A double-click with no warning would need the paid Apple Developer Program, which this project does not use.
+4. Allow Bluetooth when macOS asks.
+5. Connect the earbuds in Bluetooth settings if they are not already connected. OpenBuds connects by itself.
+
+Quit HeyMelody, or any Chrome tab that is already connected. Only one app can hold the earbuds' control link.
+
+If the earbuds icon never appears in the menu bar, open **System Settings → Menu Bar** and turn **OpenBuds** on.
+
+To start it with your Mac, open the panel, go to **Features**, and turn on **Open at login**.
+
+### Build it yourself
+
+Building on your own Mac signs the app for that machine, so the Open Anyway step above does not apply.
+
+You need macOS 26 or later and Xcode from the App Store. The script uses `/Applications/Xcode.app` when `DEVELOPER_DIR` is unset.
 
 ```sh
 git clone https://github.com/Yashasewi/oneplus-buds-control.git
@@ -16,34 +34,69 @@ cd oneplus-buds-control/native
 ./scripts/build-app.sh --install
 ```
 
-This builds a release, signs it for this Mac, copies it to `/Applications/OpenBuds.app` and opens it. The earbuds icon appears in the menu bar.
+That builds a release, ad-hoc signs it, copies it to `/Applications/OpenBuds.app`, and opens it. `./scripts/build-app.sh` without `--install` launches the copy in `native/.build/` instead. The app must run as a bundle: macOS does not open Bluetooth RFCOMM channels for a bare command-line binary.
 
-1. When macOS asks for Bluetooth access, click **Allow**. Without it the app cannot reach the earbuds.
-2. Connect your earbuds to the Mac in Bluetooth settings as usual. The app connects to them by itself.
-3. To start it with your Mac, open the panel, then **Features**, and turn on **Open at login**.
+`native/scripts/make-icon.swift` draws `native/Support/AppIcon.icns`. Run `swift scripts/make-icon.swift` inside `native/` to regenerate it. The build copies the existing icon and does not redraw it.
 
-Quit the HeyMelody app or any Chrome tab using the web app first: only one app can hold the earbuds' control link at a time.
+## Web app
 
-To update, pull and run `./scripts/build-app.sh --install` again. To uninstall, quit it from the panel and delete `/Applications/OpenBuds.app`.
+The page is also on the web, and that page has a **Download for Mac** button. Chrome's Web Serial API needs `https://` or `localhost`, so the hosted page works in desktop Chrome. The first **Connect** on that address is a new permission, separate from `localhost`.
 
-`./scripts/build-app.sh` without `--install` builds and opens a copy from `native/.build/` instead. The app must run as an app bundle: macOS does not open Bluetooth RFCOMM channels for bare command-line binaries.
+To run it yourself you need Node.js 22.18 or newer and pnpm:
 
-The protocol is in `native/Sources/BudsKit/` (`Protocol.swift`, `Settings.swift`, `Session.swift`, `Link.swift`) and the interface in `native/Sources/OpenBuds/`. The app icon is drawn by `native/scripts/make-icon.swift`; run it with `swift scripts/make-icon.swift` inside `native/` to regenerate `Support/AppIcon.icns`.
+```sh
+cd app
+pnpm install
+pnpm dev
+```
 
-## Web app (Chrome)
+Open [http://localhost:5173/](http://localhost:5173/) in desktop Chrome, not `127.0.0.1`. Chrome remembers the earbuds per address. `pnpm build` writes `app/dist`.
 
-The app is in `app/` (React, TypeScript, Tailwind, built with Vite+). Run `pnpm install` once, then `pnpm exec vp dev` inside `app/`, and open **http://localhost:5173/** in normal Chrome. Chrome remembers the earbuds per address, so always use this one (not `127.0.0.1`). Keep your earbuds connected in macOS and click **Connect earbuds**, then choose them in the browser chooser. After the first time, the page connects by itself when it opens or when the earbuds come back, unless you pressed **Disconnect**.
+### Cloudflare Pages
 
-## What both apps do
+Connect this GitHub repo in the Cloudflare dashboard (**Workers & Pages → Create → Pages → Connect to Git**). Install the Cloudflare GitHub app on this repository only.
 
-They read battery, wearing status, firmware, noise mode, EQ, gesture and call mappings, feature switches, connected devices, audio codec, BassWave and prompt volume. Battery, wearing, noise, EQ and game-mode changes arrive live.
+- Production branch: `main`. Pushes to `dev` do not update the live site.
+- Root directory: `app`
+- Build command: `pnpm install && pnpm exec vp build`
+- Build output directory: `dist`
+- Environment variable: `NODE_VERSION` = `22`
 
-Settings can be changed: noise mode and ANC level, the touch-and-hold noise cycle, EQ presets and custom presets, BassWave, wear detection, game mode, smart volume, Golden Sound, Hi-Res, 3D Audio, gestures and call controls, dual connection and prompt volume. Every change needs the earbuds' acknowledgement and a matching read-back. Tools: find my earbuds, fit test and the Golden Sound hearing test. Hi-Res needs LHDC, which macOS does not support, so it is only available from devices that connect with LHDC.
+A merge to `main` publishes the site. Prefix a commit message with `[CF-Pages-Skip]` to skip a site build when a release only changes the Mac app. A Git-connected Pages project cannot be switched to Direct Upload later.
 
-Firmware updates, resets, pairing, ear scans, cloud features, codec selection and commands these earbuds do not advertise (tap sensitivity, head gestures, device manager, personalised ANC) are rejected by the encoder's allowlist. Music volume belongs to the playing device, not the earbuds' protocol, so the Mac app controls the Mac's output volume instead.
+## Features
 
-## History and research
+Both apps can read battery, wearing, firmware, noise mode, the equalizer, gestures, feature switches, connected devices, the audio codec, BassWave, and prompt volume. Both can change noise control and ANC strength, the touch-and-hold cycle, equalizer presets, gestures and call controls, and the feature switches. Tools are find my earbuds, the fit test, and the Golden Sound hearing test.
 
-The first, plain-JavaScript dashboard (`web/`, served by `serve_web.py` on port 8974) was removed after commit `212478a`. To look at it again without touching your branch: `git worktree add ../buds-old-dashboard 212478a`, then `npm start` in that folder.
+The Mac app also sets the Mac's output volume, shows a card when the earbuds connect, notifies you at 20% and 10% battery, and can open at login.
 
-The web protocol is in `app/src/lib/protocol.ts` and the connection in `app/src/lib/session.ts`. Research, attribution, captured evidence and remaining unknowns are in [docs/heymelody](docs/heymelody/README.md); the native app plan is in [docs/native-and-web-plan.md](docs/native-and-web-plan.md).
+Every change waits for the earbuds to accept it, then reads the setting back.
+
+## Requirements
+
+- Mac app: macOS 26 or later, Apple silicon for the downloaded disk image. Xcode to build from source.
+- Web app: desktop Google Chrome, Node.js 22.18 or newer, pnpm.
+
+## Limits
+
+- OnePlus Buds 4 only, exercised on firmware 138.138.105.
+- Hi-Res audio needs the LHDC codec. macOS connects with AAC, and the earbuds refuse Hi-Res on that link.
+- Firmware updates, resets, pairing, ear scans, and cloud features are not implemented.
+- Only one program can hold the control link at a time.
+
+## Development
+
+Day-to-day work happens on `dev`. A release is a pull request from `dev` into `main`. Merging that pull request builds `OpenBuds.dmg` and attaches it to a GitHub Release. The wire format is described in [docs/protocol.md](docs/protocol.md).
+
+## Credits
+
+- [QuickBuds](https://github.com/spizganed/QuickBuds) by spizganed, GPL-3.0-or-later. The command bitmap in both apps is from `desktop/src/protocol.rs`.
+- [OppoPodsManager](https://github.com/Zhaoyi-ya/OppoPodsManager), GPL-3.0-or-later. An earlier protocol write-up that the notes cite.
+- [Pods-Protocol](https://github.com/Star-ZER0/Pods-Protocol-Reverse-Engineering), CC-BY-SA-4.0. A format reference.
+- [Geologica](https://fonts.google.com/specimen/Geologica), shipped through `@fontsource-variable/geologica`.
+
+HeyMelody is the behavior reference for these earbuds. OpenBuds does not include HeyMelody's code.
+
+## License
+
+[GPL-3.0-or-later](LICENSE).
