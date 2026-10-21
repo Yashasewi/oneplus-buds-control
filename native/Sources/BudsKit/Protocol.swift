@@ -1,5 +1,5 @@
 // Swift port of app/src/lib/protocol.ts (the subset the menu-bar app uses).
-// Provenance: docs/heymelody/evidence/quickbuds/docs/PROTOCOL.md and the hardware captures in docs/heymelody/evidence.
+// Protocol facts: docs/protocol.md.
 import Foundation
 
 public typealias Bytes = [UInt8]

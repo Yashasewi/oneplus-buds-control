@@ -1,5 +1,4 @@
-// Protocol facts and provenance: docs/heymelody/{packet-analysis,quickbuds-reference}.md and
-// docs/heymelody/evidence/quickbuds/docs/PROTOCOL.md.
+// Protocol facts: docs/protocol.md.
 export const SERVICE = "0000079a-d102-11e1-9b23-00025b00a5a5";
 export const MODEL = "065414";
 

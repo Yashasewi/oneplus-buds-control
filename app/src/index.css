@@ -2,11 +2,11 @@
 
 @theme {
   --font-sans: "Geologica Variable", ui-sans-serif, system-ui, sans-serif;
-  --color-fog: #e4e9e7;
-  --color-sheet: #f4f6f5;
-  --color-ink: #1d2829;
-  --color-tip: #2f5a55;
-  --color-mint: #9ed9c8;
+  --color-fog: #e8ecf4;
+  --color-sheet: #f6f8fc;
+  --color-ink: #151c33;
+  --color-tip: #2a4fd6;
+  --color-mint: #bcd4ff;
   --color-amber: #e3a13b;
   --color-warn: #8a5300;
 }
@@ -23,7 +23,7 @@
   body {
     min-height: 100dvh;
     background:
-      radial-gradient(60rem 40rem at 12% -10%, rgb(158 217 200 / 0.35), transparent 60%),
+      radial-gradient(60rem 40rem at 12% -10%, rgb(92 158 255 / 0.3), transparent 60%),
       var(--color-fog);
   }
   :focus-visible {
@@ -70,7 +70,7 @@
   background: linear-gradient(
     to right,
     var(--color-tip) var(--fill, 50%),
-    rgb(29 40 41 / 0.12) var(--fill, 50%)
+    rgb(21 28 51 / 0.12) var(--fill, 50%)
   );
 }
 .range::-webkit-slider-thumb {
@@ -82,7 +82,7 @@
   background: var(--color-sheet);
   box-shadow:
     0 0 0 1.5px var(--color-tip),
-    0 1px 3px rgb(29 40 41 / 0.2);
+    0 1px 3px rgb(21 28 51 / 0.2);
 }
 .range:disabled {
   cursor: not-allowed;
@@ -100,7 +100,7 @@
 .range-vertical::-webkit-slider-runnable-track {
   width: 0.3rem;
   border-radius: 999px;
-  background: rgb(29 40 41 / 0.12);
+  background: rgb(21 28 51 / 0.12);
 }
 .range-vertical::-webkit-slider-thumb {
   appearance: none;
@@ -114,10 +114,10 @@
 
 .sheet-dialog {
   max-height: calc(100dvh - 2rem);
-  box-shadow: 0 30px 80px -20px rgb(29 40 41 / 0.35);
+  box-shadow: 0 30px 80px -20px rgb(21 28 51 / 0.35);
 }
 .sheet-dialog::backdrop {
-  background: rgb(29 40 41 / 0.32);
+  background: rgb(21 28 51 / 0.32);
   backdrop-filter: blur(3px);
 }
 .sheet-dialog[open] {

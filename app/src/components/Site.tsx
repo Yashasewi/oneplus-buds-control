@@ -32,7 +32,7 @@ function useRelease() {
   const [release, setRelease] = useState<Release>();
   useEffect(() => {
     let live = true;
-    latestRelease().then((r) => live && setRelease(r));
+    void latestRelease().then((r) => live && setRelease(r));
     return () => {
       live = false;
     };
@@ -88,12 +88,16 @@ export function MacDownload({ compact }: { compact?: boolean }) {
     <section
       aria-labelledby="mac-app"
       className={cx(
-        "overflow-hidden rounded-[1.6rem] border border-ink/10 bg-sheet/70 shadow-[0_1px_0_rgb(255_255_255/0.6)_inset,0_20px_50px_-30px_rgb(29_40_41/0.35)] backdrop-blur",
+        "overflow-hidden rounded-[1.6rem] border border-ink/10 bg-sheet/70 shadow-[0_1px_0_rgb(255_255_255/0.6)_inset,0_20px_50px_-30px_rgb(21_28_51/0.35)] backdrop-blur",
         compact ? "mb-10" : "mt-14",
       )}
     >
       <div className="flex gap-4 p-5 sm:gap-5 sm:p-6">
-        <img src="/icon.svg" alt="" className="size-14 shrink-0 rounded-[1rem] shadow-md sm:size-16 sm:rounded-[1.1rem]" />
+        <img
+          src="/icon.svg"
+          alt=""
+          className="size-14 shrink-0 rounded-[1rem] shadow-md sm:size-16 sm:rounded-[1.1rem]"
+        />
         <div className="min-w-0 flex-1">
           <h2 id="mac-app" className="text-[1.2rem] font-medium tracking-[-0.01em]">
             OpenBuds for Mac
