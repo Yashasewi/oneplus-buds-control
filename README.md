@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Yashasewi/oneplus-buds-control/releases/latest/download/OpenBuds.dmg"><img src="https://img.shields.io/badge/Download-OpenBuds.dmg-2140c8?style=for-the-badge&logo=apple&logoColor=white" alt="Download OpenBuds.dmg"></a>
+  <a href="https://github.com/Yashasewi/openbuds/releases/latest/download/OpenBuds.dmg"><img src="https://img.shields.io/badge/Download-OpenBuds.dmg-2140c8?style=for-the-badge&logo=apple&logoColor=white" alt="Download OpenBuds.dmg"></a>
   <a href="https://openbuds.yashasewi.me"><img src="https://img.shields.io/badge/Open-web%20app-2f5a55?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Open the web app"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Yashasewi/oneplus-buds-control/releases/latest"><img src="https://img.shields.io/github/v/release/Yashasewi/oneplus-buds-control?label=release&color=2140c8" alt="Latest release"></a>
-  <a href="https://github.com/Yashasewi/oneplus-buds-control/releases"><img src="https://img.shields.io/github/downloads/Yashasewi/oneplus-buds-control/total?color=2140c8" alt="Downloads"></a>
+  <a href="https://github.com/Yashasewi/openbuds/releases/latest"><img src="https://img.shields.io/github/v/release/Yashasewi/openbuds?label=release&color=2140c8" alt="Latest release"></a>
+  <a href="https://github.com/Yashasewi/openbuds/releases"><img src="https://img.shields.io/github/downloads/Yashasewi/openbuds/total?color=2140c8" alt="Downloads"></a>
   <img src="https://img.shields.io/badge/macOS-26%2B-black?logo=apple" alt="macOS 26 or later">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
 </p>
@@ -47,7 +47,7 @@ Every change waits for the earbuds to accept it, then reads the setting back, so
 
 ## Install the Mac app
 
-1. Download **[OpenBuds.dmg](https://github.com/Yashasewi/oneplus-buds-control/releases/latest/download/OpenBuds.dmg)**. It needs macOS 26 or later on Apple silicon.
+1. Download **[OpenBuds.dmg](https://github.com/Yashasewi/openbuds/releases/latest/download/OpenBuds.dmg)**. It needs macOS 26 or later on Apple silicon.
 2. Open the disk image and drag **OpenBuds** to **Applications**.
 3. Open OpenBuds. The first time, macOS says it can't verify the app. Click **Done**, open **System Settings → Privacy & Security**, and click **Open Anyway**. macOS remembers that choice.
 4. Allow Bluetooth when macOS asks. If the earbuds are connected to the Mac, OpenBuds finds them by itself.
@@ -79,8 +79,8 @@ Open **[openbuds.yashasewi.me](https://openbuds.yashasewi.me)** in desktop Googl
 You need macOS 26 or later and Xcode from the App Store.
 
 ```sh
-git clone https://github.com/Yashasewi/oneplus-buds-control.git
-cd oneplus-buds-control/native
+git clone https://github.com/Yashasewi/openbuds.git
+cd openbuds/native
 ./scripts/build-app.sh --install
 ```
 
