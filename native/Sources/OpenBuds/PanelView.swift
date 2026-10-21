@@ -86,7 +86,7 @@ struct HomePage: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      if session.isConnected { header.padding(.horizontal, 6).padding(.top, 2) }
+      header.padding(.leading, 6).padding(.top, 2)
       switch session.connection {
       case .connected:
         PanelSection { BatteryRow(session: session).padding(.vertical, 10) }
@@ -99,7 +99,7 @@ struct HomePage: View {
           }
           GridRow {
             NavTile(icon: "switch.2", color: .green, title: "Features", value: featureSummary) { model.open(.features) }
-            NavTile(icon: "wrench.and.screwdriver.fill", color: .orange, title: "Tools", value: "Find, fit, hearing") { model.open(.tools) }
+            NavTile(icon: "wrench.and.screwdriver.fill", color: .orange, title: "Tools", value: "Find and fit") { model.open(.tools) }
           }
         }
       case .connecting(let name):
@@ -123,7 +123,6 @@ struct HomePage: View {
           .fixedSize(horizontal: false, vertical: true)
           .padding(.horizontal, 6)
       }
-      footer.padding(.horizontal, 6)
     }
     .padding(Metrics.padding)
   }
@@ -138,39 +137,34 @@ struct HomePage: View {
   }
 
   private var header: some View {
-    HStack(spacing: 10) {
+    HStack(spacing: 8) {
       VStack(alignment: .leading, spacing: 1) {
-        Text("OnePlus Buds 4").font(.headline)
-        Text(subtitle).font(.caption).foregroundStyle(.secondary)
+        Text(session.isConnected ? "OnePlus Buds 4" : "OpenBuds").font(.headline)
+        if let subtitle { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
       }
       Spacer()
       if session.busy { ProgressView().controlSize(.small) }
-    }
-  }
-
-  private var subtitle: String {
-    guard session.isConnected else { return "Not connected" }
-    if let codec = session.codec.flatMap({ codecNames[$0] }) { return "Connected with \(codec)" }
-    return "Connected"
-  }
-
-  private var footer: some View {
-    HStack(spacing: 6) {
-      Text("OpenBuds").font(.caption.weight(.medium)).foregroundStyle(.tertiary)
-      Spacer()
       if session.isConnected {
-        Button("Disconnect") { session.disconnect() }
-          .buttonStyle(.glass)
+        Toggle("Connected", isOn: Binding(get: { session.isConnected }, set: { if !$0 { session.disconnect() } }))
+          .labelsHidden()
+          .toggleStyle(.switch)
+          .controlSize(.small)
+          .help("Disconnect from the earbuds")
       }
       Button("Quit OpenBuds", systemImage: "power") { NSApplication.shared.terminate(nil) }
         .labelStyle(.iconOnly)
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
+        .controlSize(.small)
         .help("Quit OpenBuds")
         .keyboardShortcut("q")
     }
-    .controlSize(.small)
-    .padding(.top, 2)
+  }
+
+  private var subtitle: String? {
+    guard session.isConnected else { return nil }
+    if let codec = session.codec.flatMap({ codecNames[$0] }) { return "Connected with \(codec)" }
+    return "Connected"
   }
 }
 
@@ -491,7 +485,7 @@ struct NoiseControl: View {
     }
     var title: String {
       switch self {
-      case .anc: "Noise Cancellation"
+      case .anc: "Noise Cancel"
       case .adaptive: "Adaptive"
       case .transparency: "Transparency"
       case .off: "Off"
@@ -532,9 +526,8 @@ struct NoiseControl: View {
                   .glassEffect(selected ? .regular.tint(.accentColor).interactive() : .regular.interactive(), in: .circle)
                 Text(group.title)
                   .font(.caption2)
-                  .multilineTextAlignment(.center)
-                  .lineLimit(2)
-                  .fixedSize(horizontal: false, vertical: true)
+                  .lineLimit(1)
+                  .minimumScaleFactor(0.8)
               }
               .frame(maxWidth: .infinity)
               .contentShape(.rect)
