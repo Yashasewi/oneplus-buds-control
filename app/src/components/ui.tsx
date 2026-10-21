@@ -31,7 +31,7 @@ export function Switch({
     >
       <span
         className={cx(
-          "absolute top-1 left-1 size-5 rounded-full bg-sheet shadow-[0_1px_2px_rgb(29_40_41/0.25)] transition-transform duration-200",
+          "absolute top-1 left-1 size-5 rounded-full bg-sheet shadow-[0_1px_2px_rgb(21_28_51/0.25)] transition-transform duration-200",
           on && "translate-x-5",
         )}
       />
@@ -84,7 +84,7 @@ export function Segmented<T extends string>({
                 ? "min-h-12 flex-auto px-2.5 py-2 text-[0.88rem] whitespace-nowrap"
                 : "min-h-9 rounded-lg py-1.5 text-sm",
               selected
-                ? "bg-sheet text-ink shadow-[0_1px_3px_rgb(29_40_41/0.12)]"
+                ? "bg-sheet text-ink shadow-[0_1px_3px_rgb(21_28_51/0.12)]"
                 : "text-ink/65 hover:text-ink disabled:hover:text-ink/65",
             )}
           >
@@ -220,7 +220,7 @@ export function Group({
           <p className="mt-0.5 max-w-[56ch] text-[0.92rem] text-ink/60">{description}</p>
         )}
       </div>
-      <div className="divide-y divide-ink/[0.08] rounded-[1.4rem] bg-sheet px-5 shadow-[0_1px_0_rgb(29_40_41/0.04)]">
+      <div className="divide-y divide-ink/[0.08] rounded-[1.4rem] bg-sheet px-5 shadow-[0_1px_0_rgb(21_28_51/0.04)]">
         {children}
       </div>
     </section>
