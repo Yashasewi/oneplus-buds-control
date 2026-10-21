@@ -86,7 +86,7 @@ struct HomePage: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      header.padding(.horizontal, 6).padding(.top, 2)
+      if session.isConnected { header.padding(.horizontal, 6).padding(.top, 2) }
       switch session.connection {
       case .connected:
         PanelSection { BatteryRow(session: session).padding(.vertical, 10) }
@@ -102,27 +102,21 @@ struct HomePage: View {
             NavTile(icon: "wrench.and.screwdriver.fill", color: .orange, title: "Tools", value: "Find, fit, hearing") { model.open(.tools) }
           }
         }
-      case .connecting:
-        PanelSection {
-          HStack(spacing: 10) {
-            ProgressView().controlSize(.small)
-            Text("Connecting…").foregroundStyle(.secondary)
-          }
-          .padding(.vertical, 10)
-        }
+      case .connecting(let name):
+        ConnectionCard(title: "Connecting…", message: name, busy: true)
       case .searching:
-        PanelSection { Text("Looking for your earbuds…").foregroundStyle(.secondary).padding(.vertical, 10) }
+        ConnectionCard(title: "Looking for your earbuds", message: "This takes a moment.", busy: true)
       case .unavailable(let message):
-        PanelSection {
-          VStack(alignment: .leading, spacing: 10) {
-            Text(message).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Button("Connect") { Task { await session.connect() } }
-              .buttonStyle(.glassProminent)
+        ConnectionCard(title: "Not connected", message: message, busy: false) {
+          Button("Connect") { Task { await session.connect() } }
+            .buttonStyle(.glassProminent)
+          Button("Bluetooth Settings") {
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.BluetoothSettings")!)
           }
-          .padding(.vertical, 10)
+          .buttonStyle(.glass)
         }
       }
-      if let error = session.lastError {
+      if let error = session.lastError, session.isConnected {
         Label(error, systemImage: "exclamationmark.triangle.fill")
           .font(.caption)
           .foregroundStyle(.orange)
@@ -171,6 +165,50 @@ struct HomePage: View {
     .buttonStyle(.borderless)
     .foregroundStyle(.secondary)
     .padding(.top, 2)
+  }
+}
+
+/// The panel when there is nothing to control yet: what is happening and what to do.
+struct ConnectionCard<Actions: View>: View {
+  let title: String
+  let message: String
+  let busy: Bool
+  @ViewBuilder var actions: Actions
+
+  var body: some View {
+    VStack(spacing: 12) {
+      ZStack {
+        Image(systemName: "airpods.pro")
+          .font(.system(size: 24, weight: .regular))
+          .foregroundStyle(busy ? .secondary : .primary)
+          .frame(width: 60, height: 60)
+          .glassEffect(.regular, in: .circle)
+        if busy {
+          ProgressView().controlSize(.small).offset(x: 24, y: 22)
+        }
+      }
+      .padding(.top, 6)
+      VStack(spacing: 4) {
+        Text(title).font(.headline)
+        Text(message)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .padding(.horizontal, 12)
+      HStack(spacing: 8) { actions }
+        .controlSize(.small)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 14)
+    .background(.fill.quaternary, in: .rect(cornerRadius: Metrics.section))
+  }
+}
+
+extension ConnectionCard where Actions == EmptyView {
+  init(title: String, message: String, busy: Bool) {
+    self.init(title: title, message: message, busy: busy) { EmptyView() }
   }
 }
 
@@ -395,7 +433,7 @@ struct BatteryGauge: View {
           .stroke(tint, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
           .rotationEffect(.degrees(-90))
           .animation(.smooth, value: level?.percent)
-        Image(systemName: part == .chargingCase ? "earbuds.case.fill" : "earbuds")
+        Image(systemName: symbol)
           .font(.system(size: 14))
           .foregroundStyle(level?.percent == nil ? .tertiary : .primary)
       }
@@ -405,6 +443,14 @@ struct BatteryGauge: View {
         Text(level?.percent.map { "\($0)%" } ?? "–").font(.caption.weight(.medium).monospacedDigit())
       }
       Text(note).font(.caption2).foregroundStyle(.secondary)
+    }
+  }
+
+  private var symbol: String {
+    switch part {
+    case .left: "airpods.pro.left"
+    case .right: "airpods.pro.right"
+    case .chargingCase: "airpods.pro.chargingcase.wireless.fill"
     }
   }
 

@@ -8,7 +8,7 @@ let package = Package(
   name: "BudsNative",
   platforms: [.macOS(.v26)],
   products: [
-    .executable(name: "BudsBar", targets: ["BudsBar"]),
+    .executable(name: "OpenBuds", targets: ["OpenBuds"]),
     .executable(name: "budsprobe", targets: ["budsprobe"]),
   ],
   targets: [
@@ -18,9 +18,9 @@ let package = Package(
       linkerSettings: [.linkedFramework("IOBluetooth")]
     ),
     .executableTarget(
-      name: "BudsBar",
+      name: "OpenBuds",
       dependencies: ["BudsKit"],
-      path: "Sources/BudsBar"
+      path: "Sources/OpenBuds"
     ),
     .executableTarget(
       name: "budsprobe",

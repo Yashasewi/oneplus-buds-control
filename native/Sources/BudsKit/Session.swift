@@ -71,13 +71,13 @@ public final class BudsSession {
 
   public init() {
     link.onData = { [weak self] bytes in self?.received(bytes) }
-    link.onClose = { [weak self] in self?.closed(reason: "The earbuds disconnected.") }
+    link.onClose = { [weak self] in self?.closed(reason: "They reconnect by themselves when you take them out of the case.") }
     watcher.onConnect = { [weak self] device in
       guard let self, RFCOMMLink.candidates().contains(where: { $0.addressString == device.addressString }) else { return }
       // Give the buds a moment to bring up their services after the baseband connects.
       DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { MainActor.assumeIsolated { self.autoConnect() } }
     }
-    watcher.onDisconnect = { [weak self] _ in self?.closed(reason: "The earbuds disconnected.") }
+    watcher.onDisconnect = { [weak self] _ in self?.closed(reason: "They reconnect by themselves when you take them out of the case.") }
   }
 
   public func start() {
@@ -94,7 +94,7 @@ public final class BudsSession {
     guard !isConnected, !connecting else { return }
     userDisconnected = false
     guard let target = RFCOMMLink.candidates().first(where: { $0.isConnected() }) else {
-      connection = .unavailable("Your OnePlus Buds 4 aren’t connected to this Mac.")
+      connection = .unavailable("Connect your OnePlus Buds 4 to this Mac in Bluetooth settings.")
       return
     }
     connecting = true
@@ -127,7 +127,7 @@ public final class BudsSession {
   public func disconnect() {
     userDisconnected = true
     link.close()
-    closed(reason: "Disconnected. Click Connect to reconnect.")
+    closed(reason: "You disconnected them. Click Connect to reconnect.")
   }
 
   private func closed(reason: String) {

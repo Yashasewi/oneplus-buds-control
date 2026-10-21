@@ -3,7 +3,7 @@ import BudsKit
 import SwiftUI
 
 @main
-struct BudsBarApp: App {
+struct OpenBudsApp: App {
   @State private var session: BudsSession
   @State private var audio = OutputAudio()
   @State private var prefs: AppPrefs
@@ -39,12 +39,12 @@ struct MenuBarLabel: View {
   let session: BudsSession
 
   var body: some View {
-    HStack(spacing: 3) {
-      Image(systemName: "earbuds")
-        .opacity(session.isConnected ? 1 : 0.5)
+    HStack(spacing: 4) {
+      Image(systemName: "airpods.pro")
       if session.isConnected, let level = session.lowestBud {
         Text("\(level)%").monospacedDigit()
       }
     }
+    .accessibilityLabel(session.isConnected ? "OpenBuds, \(session.lowestBud.map { "\($0)%" } ?? "connected")" : "OpenBuds, not connected")
   }
 }

@@ -1,8 +1,8 @@
-# OnePlus Buds control
+# OpenBuds
 
-Controllers for **OnePlus Buds 4**, tested with firmware **138.138.105** on macOS. There are two: a native Mac menu-bar app (`native/`) and a web app for Google Chrome (`app/`). Both talk to the earbuds directly over Bluetooth RFCOMM; there is no server.
+Controllers for **OnePlus Buds 4**, tested with firmware **138.138.105** on macOS. There are two: **OpenBuds**, a native Mac menu-bar app (`native/`), and a web app for Google Chrome (`app/`). Both talk to the earbuds directly over Bluetooth RFCOMM; there is no server.
 
-## Mac menu-bar app
+## OpenBuds (Mac menu-bar app)
 
 A menu-bar panel in the macOS Liquid Glass style: battery for both earbuds and the case, noise control, the Mac's volume, and pages for Sound, Controls, Features and Tools. It also shows a card when the earbuds connect and notifies you at 20% and 10% battery.
 
@@ -16,7 +16,7 @@ cd oneplus-buds-control/native
 ./scripts/build-app.sh --install
 ```
 
-This builds a release, signs it for this Mac, copies it to `/Applications/BudsBar.app` and opens it. The earbuds icon appears in the menu bar.
+This builds a release, signs it for this Mac, copies it to `/Applications/OpenBuds.app` and opens it. The earbuds icon appears in the menu bar.
 
 1. When macOS asks for Bluetooth access, click **Allow**. Without it the app cannot reach the earbuds.
 2. Connect your earbuds to the Mac in Bluetooth settings as usual. The app connects to them by itself.
@@ -24,11 +24,11 @@ This builds a release, signs it for this Mac, copies it to `/Applications/BudsBa
 
 Quit the HeyMelody app or any Chrome tab using the web app first: only one app can hold the earbuds' control link at a time.
 
-To update, pull and run `./scripts/build-app.sh --install` again. To uninstall, quit it from the panel and delete `/Applications/BudsBar.app`.
+To update, pull and run `./scripts/build-app.sh --install` again. To uninstall, quit it from the panel and delete `/Applications/OpenBuds.app`.
 
 `./scripts/build-app.sh` without `--install` builds and opens a copy from `native/.build/` instead. The app must run as an app bundle: macOS does not open Bluetooth RFCOMM channels for bare command-line binaries.
 
-The protocol is in `native/Sources/BudsKit/` (`Protocol.swift`, `Settings.swift`, `Session.swift`, `Link.swift`) and the interface in `native/Sources/BudsBar/`.
+The protocol is in `native/Sources/BudsKit/` (`Protocol.swift`, `Settings.swift`, `Session.swift`, `Link.swift`) and the interface in `native/Sources/OpenBuds/`. The app icon is drawn by `native/scripts/make-icon.swift`; run it with `swift scripts/make-icon.swift` inside `native/` to regenerate `Support/AppIcon.icns`.
 
 ## Web app (Chrome)
 
