@@ -7,13 +7,14 @@ import SwiftUI
 @MainActor
 @Observable
 final class PanelModel {
-  enum Page: Hashable { case home, sound, controls, features, tools, preset, hearing }
+  enum Page: Hashable { case home, sound, controls, features, tools, preset, hearing, about }
 
   private(set) var page: Page = .home
   private(set) var forward = true
   var editing: Preset?
   var editingIsNew = false
   var ringing = false
+  let updates = UpdateChecker()
 
   func open(_ next: Page) {
     forward = true
@@ -73,6 +74,7 @@ struct PanelView: View {
     case .tools: ToolsPage(session: session, model: model)
     case .preset: PresetPage(session: session, model: model)
     case .hearing: HearingPage(session: session, model: model)
+    case .about: AboutPage(model: model)
     }
   }
 }
@@ -102,7 +104,7 @@ struct HomePage: View {
             NavTile(icon: "wrench.and.screwdriver.fill", color: .orange, title: "Tools", value: "Find and fit") { model.open(.tools) }
           }
         }
-        AboutRow()
+        AboutRow { model.open(.about) }
       case .connecting(let name):
         ConnectionCard(title: "Connecting…", message: name, busy: true)
       case .searching:
@@ -322,29 +324,24 @@ struct NavTile: View {
   }
 }
 
-/// Full-width row under the four home tiles. Opens the source repository.
+/// Full-width row under the four home tiles. Opens the About page.
 struct AboutRow: View {
+  let action: () -> Void
   @State private var hovering = false
 
-  private var version: String {
-    Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2"
-  }
-
   var body: some View {
-    Button {
-      NSWorkspace.shared.open(URL(string: "https://github.com/Yashasewi/oneplus-buds-control")!)
-    } label: {
+    Button(action: action) {
       HStack(spacing: 8) {
-        IconBadge(icon: "link", color: .gray)
+        GitHubBadge()
         VStack(alignment: .leading, spacing: 0) {
-          Text("About").font(.callout.weight(.medium))
-          Text("Version \(version) · GPL-3 · Buds 4")
+          Text("About OpenBuds").font(.callout.weight(.medium))
+          Text("Version \(AppInfo.version) · Open source on GitHub")
             .font(.caption2)
             .foregroundStyle(.secondary)
             .lineLimit(1)
         }
         Spacer(minLength: 0)
-        Image(systemName: "arrow.up.right")
+        Image(systemName: "chevron.right")
           .font(.caption.weight(.semibold))
           .foregroundStyle(.tertiary)
       }
@@ -355,7 +352,6 @@ struct AboutRow: View {
       .contentShape(.rect(cornerRadius: Metrics.section))
     }
     .buttonStyle(.plain)
-    .help("Open the OpenBuds source on GitHub")
     .onHover { hovering = $0 }
     .animation(.easeOut(duration: 0.12), value: hovering)
   }
