@@ -6,7 +6,7 @@ Thanks for helping. A few things keep the project easy to review.
 
 - `dev` is where all work lands. Open your pull request against `dev`.
 - `main` is the release branch. A release is a pull request from `dev` into `main`.
-- Both branches are protected: every pull request needs one approving review.
+- Both branches are protected. Changes go in through a pull request, and the **Mac app** and **Web app** checks must pass.
 
 Merging into `main` builds `OpenBuds.dmg`, publishes a GitHub Release, and redeploys [openbuds.yashasewi.me](https://openbuds.yashasewi.me). Pushes to `dev` do neither.
 
@@ -31,7 +31,7 @@ The frame format is in [docs/protocol.md](docs/protocol.md).
 
 Cloudflare Pages builds the site from this repository:
 
-- Production branch: `main`. Preview deployments are off.
+- Production branch: `main`. Every other branch gets a preview deployment, and its link is posted on the pull request.
 - Root directory: `app`
 - Build command: `pnpm install && pnpm exec vp build`
 - Output directory: `dist`

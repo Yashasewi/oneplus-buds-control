@@ -39,6 +39,12 @@
 
 Every change waits for the earbuds to accept it, then reads the setting back, so what you see is what the earbuds are actually doing.
 
+<p align="center">
+  <img src="docs/panel.png" width="300" alt="The OpenBuds menu bar panel with battery, noise control, volume, and settings">
+  &nbsp;&nbsp;
+  <img src="docs/about.png" width="300" alt="The OpenBuds About page with update check and project links">
+</p>
+
 ## Install the Mac app
 
 1. Download **[OpenBuds.dmg](https://github.com/Yashasewi/oneplus-buds-control/releases/latest/download/OpenBuds.dmg)**. It needs macOS 26 or later on Apple silicon.

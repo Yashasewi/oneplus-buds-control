@@ -5,7 +5,7 @@ __pycache__/
 *.pyc
 .build/
 .swiftpm/
-docs/heymelody/evidence/
+docs/heymelody/
 .codex/
 .cloudflare/
 *.dSYM/
