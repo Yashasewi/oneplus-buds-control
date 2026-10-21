@@ -101,9 +101,18 @@ func decodeGestures(_ p: Bytes) throws -> [GestureSlot] {
 
 func validGestureTable(_ p: Bytes) -> Bool {
   guard let n = p.first, (1...64).contains(n), p.count == 1 + Int(n) * 4 else { return false }
-  return stride(from: 1, to: p.count, by: 4).allSatisfy { i in
-    [1, 2, 4].contains(p[i]) && (1...6).contains(p[i + 1]) && (1...6).contains(p[i + 2]) && Gestures.known.contains(p[i + 3])
+  for index in stride(from: 1, to: p.count, by: 4) {
+    let device = p[index]
+    let button = p[index + 1]
+    let action = p[index + 2]
+    let function = p[index + 3]
+    let deviceOK = device == 1 || device == 2 || device == 4
+    let buttonOK = (1...6).contains(button)
+    let actionOK = (1...6).contains(action)
+    let functionOK = Gestures.known.contains(function)
+    if !deviceOK || !buttonOK || !actionOK || !functionOK { return false }
   }
+  return true
 }
 
 // Writes every slot the table has for (side, action) outside the call group; the table's shape varies between reads.
