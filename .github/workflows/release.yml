@@ -59,8 +59,8 @@ jobs:
           notes="$(git log -1 --pretty=%B)"
           notes="${notes}
 
-## Install
-Open the disk image and drag OpenBuds to Applications. macOS says it could not verify the app, because this build is ad-hoc signed and not notarized. Click Done, then System Settings, Privacy and Security, Open Anyway."
+          ## Install
+          Open the disk image and drag OpenBuds to Applications. macOS says it could not verify the app, because this build is ad-hoc signed and not notarized. Click Done, then System Settings, Privacy and Security, Open Anyway."
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" native/.build/OpenBuds.dmg --clobber
           else
