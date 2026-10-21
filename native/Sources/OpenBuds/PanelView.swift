@@ -155,15 +155,21 @@ struct HomePage: View {
   }
 
   private var footer: some View {
-    HStack {
+    HStack(spacing: 6) {
+      Text("OpenBuds").font(.caption.weight(.medium)).foregroundStyle(.tertiary)
+      Spacer()
       if session.isConnected {
         Button("Disconnect") { session.disconnect() }
+          .buttonStyle(.glass)
       }
-      Spacer()
-      Button("Quit") { NSApplication.shared.terminate(nil) }
+      Button("Quit OpenBuds", systemImage: "power") { NSApplication.shared.terminate(nil) }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .help("Quit OpenBuds")
+        .keyboardShortcut("q")
     }
-    .buttonStyle(.borderless)
-    .foregroundStyle(.secondary)
+    .controlSize(.small)
     .padding(.top, 2)
   }
 }
