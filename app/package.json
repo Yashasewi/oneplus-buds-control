@@ -1,7 +1,11 @@
 {
-  "name": "app",
+  "name": "openbuds",
   "version": "0.0.0",
   "private": true,
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": "^22.18.0 || ^24.11.0 || >=26"
+  },
   "type": "module",
   "scripts": {
     "dev": "vp dev",

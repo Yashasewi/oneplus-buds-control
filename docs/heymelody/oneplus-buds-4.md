@@ -8,7 +8,7 @@ User deployment target: **macOS + Chrome**. The user-supplied About Earbuds scre
 
 [RES-010: focused raw profile](evidence/oneplus-buds-4-profile.json) is a lossless selection from [RES-004: bundled whitelist](evidence/device-whitelist.json). Exactly one record matches name `OnePlus Buds 4` and model ID `065414` (six-character hexadecimal-looking string; its binary encoding is not proved by this resource). The selection is `whiteList[58]` with zero-based indexing. Source: `/Applications/HeyMelody.app/Wrapper/HeyMelody.app/whitelist_default_external_release.headset`; source SHA-256 is retained in RES-004 and RES-010. App 2.30.0 metadata and capability parsing are in RES-003 and RES-005.
 
-Observed identity/connection fields: `mark="开普勒(OnePlus)"`, `alias=true`, `brand="OnePlus"`, `type="T1"`, `uuid="0000079A-D102-11E1-9B23-00025B00A5A5"`, `minRiss=-70`, `minVersion=0`, `newMinVersion="2.11.1"`, `checkResponse=true`, `ctkd=1`, `gattV2=1`. The `isHidden` and `otaCategory` fields are absent. Empty `headsetAdditional={}` and function `additional={}` are preserved.
+Observed identity/connection fields: `mark="OnePlus"`, `alias=true`, `brand="OnePlus"`, `type="T1"`, `uuid="0000079A-D102-11E1-9B23-00025B00A5A5"`, `minRiss=-70`, `minVersion=0`, `newMinVersion="2.11.1"`, `checkResponse=true`, `ctkd=1`, `gattV2=1`. The `isHidden` and `otaCategory` fields are absent. Empty `headsetAdditional={}` and function `additional={}` are preserved.
 
 The UUID and GATT/CTKD flags are transport candidates that need code-path confirmation. They do not alone establish a browser-accessible service, an authentication method, cross-transport pairing behavior, characteristic UUIDs or a successful connection. The name `minRiss` is preserved as shipped; interpreting it as an RSSI threshold is an inference until the consumer code is traced. `newMinVersion` is an apparent minimum app-version gate; exact comparison behavior is unknown here.
 
@@ -115,7 +115,7 @@ This is the entire exact parsed JSON record after trailing-comma removal; names,
 {
   "id": "065414",
   "name": "OnePlus Buds 4",
-  "mark": "开普勒(OnePlus)",
+  "mark": "OnePlus",
   "alias": true,
   "brand": "OnePlus",
   "type": "T1",

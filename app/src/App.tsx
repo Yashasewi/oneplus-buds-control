@@ -26,6 +26,7 @@ export function App() {
         <NowPanel />
       </aside>
       <main className="min-w-0">
+        <DownloadMac />
         {hasData ? (
           <>
             <nav
@@ -78,6 +79,35 @@ export function App() {
       </main>
       <ConfirmHost />
     </div>
+  );
+}
+
+const MAC_DMG =
+  "https://github.com/Yashasewi/oneplus-buds-control/releases/latest/download/OpenBuds.dmg";
+
+function DownloadMac() {
+  return (
+    <section className="mb-10 rounded-2xl border border-ink/10 bg-ink/[0.03] px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-[1.05rem] font-medium">OpenBuds for Mac</h2>
+          <p className="mt-1 max-w-[52ch] text-[0.9rem] text-ink/60">
+            Apple silicon, macOS 26 or later. Drag the app to Applications.
+          </p>
+        </div>
+        <a
+          href={MAC_DMG}
+          className="rounded-full bg-tip px-4 py-2 text-[0.92rem] text-sheet hover:bg-tip/90"
+        >
+          Download for Mac
+        </a>
+      </div>
+      <p className="mt-3 max-w-[68ch] text-[0.85rem] text-ink/55">
+        The first open says Apple could not verify the app. The file is ad-hoc signed and not
+        notarized. Click Done, then System Settings, Privacy &amp; Security, Open Anyway. macOS
+        remembers that choice. Right-click Open does not skip this on macOS 15 or later.
+      </p>
+    </section>
   );
 }
 
