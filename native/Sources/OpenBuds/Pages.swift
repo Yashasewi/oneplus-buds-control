@@ -346,6 +346,7 @@ enum GestureIcons {
 struct GlassTabs<Value: Hashable>: View {
   @Binding var selection: Value
   let options: [Value]
+  var compact = false
   let title: (Value) -> String
 
   var body: some View {
@@ -357,9 +358,10 @@ struct GlassTabs<Value: Hashable>: View {
             withAnimation(.snappy(duration: 0.18)) { selection = option }
           } label: {
             Text(title(option))
+              .font(compact ? .caption : nil)
               .fontWeight(selected ? .semibold : .regular)
               .frame(maxWidth: .infinity)
-              .padding(.vertical, 6)
+              .padding(.vertical, compact ? 4 : 6)
               .foregroundStyle(selected ? Color.white : Color.primary)
               .glassEffect(selected ? .regular.tint(.accentColor).interactive() : .regular.interactive(), in: .capsule)
               .contentShape(.capsule)

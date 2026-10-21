@@ -148,7 +148,7 @@ struct HomePage: View {
         Toggle("Connected", isOn: Binding(get: { session.isConnected }, set: { if !$0 { session.disconnect() } }))
           .labelsHidden()
           .toggleStyle(.switch)
-          .controlSize(.small)
+          .controlSize(.mini)
           .help("Disconnect from the earbuds")
       }
       Button("Quit OpenBuds", systemImage: "power") { NSApplication.shared.terminate(nil) }
@@ -181,12 +181,23 @@ struct ConnectionCard<Actions: View>: View {
         Image(systemName: "airpods.pro")
           .font(.system(size: 24, weight: .regular))
           .foregroundStyle(busy ? .secondary : .primary)
+          .symbolEffect(.pulse, isActive: busy)
           .frame(width: 60, height: 60)
           .glassEffect(.regular, in: .circle)
         if busy {
-          ProgressView().controlSize(.small).offset(x: 24, y: 22)
+          TimelineView(.animation) { context in
+            let turn = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.1) / 1.1
+            Circle()
+              .trim(from: 0, to: 0.3)
+              .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+              .rotationEffect(.degrees(turn * 360))
+          }
+          .frame(width: 68, height: 68)
+          .transition(.opacity)
         }
       }
+      .frame(width: 70, height: 70)
+      .animation(.easeOut(duration: 0.2), value: busy)
       .padding(.top, 6)
       VStack(spacing: 4) {
         Text(title).font(.headline)
@@ -510,45 +521,41 @@ struct NoiseControl: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       Text("Noise Control").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-      GlassEffectContainer(spacing: 12) {
-        HStack(alignment: .top, spacing: 4) {
-          ForEach(Group.allCases, id: \.self) { group in
-            let selected = current == group
-            Button {
-              guard !selected else { return }
-              Task { await session.setNoise(group.mode) }
-            } label: {
-              VStack(spacing: 7) {
-                Image(systemName: group.symbol)
-                  .font(.system(size: 13, weight: .medium))
-                  .frame(width: 34, height: 34)
-                  .foregroundStyle(selected ? Color.white : Color.primary)
-                  .glassEffect(selected ? .regular.tint(.accentColor).interactive() : .regular.interactive(), in: .circle)
-                Text(group.title)
-                  .font(.caption2)
-                  .lineLimit(1)
-                  .minimumScaleFactor(0.8)
-              }
-              .frame(maxWidth: .infinity)
-              .contentShape(.rect)
+      HStack(alignment: .top, spacing: 4) {
+        ForEach(Group.allCases, id: \.self) { group in
+          let selected = current == group
+          Button {
+            guard !selected else { return }
+            Task { await session.setNoise(group.mode) }
+          } label: {
+            VStack(spacing: 7) {
+              Image(systemName: group.symbol)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(selected ? Color.white : Color.primary)
+                .frame(width: 36, height: 36)
+                .glassEffect(selected ? .regular.tint(.accentColor) : .regular, in: .circle)
+              Text(group.title)
+                .font(.caption2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             }
-            .buttonStyle(.plain)
-            .disabled(session.busy)
-            .accessibilityAddTraits(selected ? .isSelected : [])
+            .frame(maxWidth: .infinity)
+            .contentShape(.rect)
           }
+          .buttonStyle(.plain)
+          .disabled(session.busy)
+          .accessibilityAddTraits(selected ? .isSelected : [])
         }
       }
       if current == .anc {
-        Picker("Strength", selection: Binding(
-          get: { NoiseMode.ancLevels.contains(session.noise?.mode ?? .off) ? session.noise?.mode : nil },
-          set: { if let mode = $0 { Task { await session.setNoise(mode) } } }
-        )) {
-          ForEach(NoiseMode.ancLevels, id: \.self) { mode in
-            Text(mode.rawValue.capitalized).tag(Optional(mode))
-          }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
+        GlassTabs(
+          selection: Binding(
+            get: { session.noise?.mode ?? .smart },
+            set: { mode in if mode != session.noise?.mode { Task { await session.setNoise(mode) } } }
+          ),
+          options: NoiseMode.ancLevels,
+          compact: true
+        ) { $0.rawValue.capitalized }
         .disabled(session.busy)
         if session.noise?.mode == .smart, let level = session.smartLevel, level != .smart {
           Text("Smart is using \(level.rawValue) right now.").font(.caption).foregroundStyle(.secondary)
