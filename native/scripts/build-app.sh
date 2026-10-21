@@ -11,7 +11,7 @@ if [ -z "$DEVELOPER_DIR" ] && [ -d /Applications/Xcode.app ]; then
 fi
 swift build -c release --product OpenBuds
 pkill -x OpenBuds 2>/dev/null || true
-./scripts/package-app.sh
+BUNDLE_VERSION="$(git rev-list --count HEAD 2>/dev/null || echo 0)" ./scripts/package-app.sh
 APP=.build/OpenBuds.app
 if [ "$1" = "--install" ]; then
   rm -rf /Applications/OpenBuds.app

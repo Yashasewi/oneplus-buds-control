@@ -1,4 +1,6 @@
+import { REPO } from "../lib/links";
 import { CODECS, SWITCHES } from "../lib/protocol";
+import { GitHubMark } from "./Site";
 import { run, session, useAction, useBuds } from "../lib/store";
 import { SwitchRow } from "./Sound";
 import { Group, Range, Row, cx } from "./ui";
@@ -100,12 +102,19 @@ export function About() {
   const volume = useAction("promptVolume");
   return (
     <Group title="About">
-      <a
-        href="https://github.com/Yashasewi/oneplus-buds-control"
-        className="flex items-center justify-between gap-4 py-3.5 hover:text-tip"
-      >
-        <span className="text-[1rem]">Source on GitHub</span>
-        <span className="text-[0.95rem] text-ink/50">OpenBuds</span>
+      <a href={REPO} className="group flex items-center gap-3.5 py-3.5">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-ink text-sheet">
+          <GitHubMark className="size-4.5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[1rem] group-hover:text-tip">Source on GitHub</span>
+          <span className="block truncate text-[0.88rem] text-ink/50">
+            OpenBuds is open source under GPL-3.0-or-later
+          </span>
+        </span>
+        <span aria-hidden className="text-ink/35 group-hover:text-tip">
+          ↗
+        </span>
       </a>
       {state.promptVolume !== undefined && (
         <Row
