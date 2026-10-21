@@ -1,8 +1,8 @@
-export const REPO = "https://github.com/Yashasewi/oneplus-buds-control";
+export const REPO = "https://github.com/Yashasewi/openbuds";
 export const RELEASES = `${REPO}/releases`;
 export const ISSUES = `${REPO}/issues/new/choose`;
 export const MAC_DMG = `${REPO}/releases/latest/download/OpenBuds.dmg`;
-const LATEST_API = "https://api.github.com/repos/Yashasewi/oneplus-buds-control/releases/latest";
+const LATEST_API = "https://api.github.com/repos/Yashasewi/openbuds/releases/latest";
 
 export type Release = { tag: string; date: Date; size?: number; url: string };
 

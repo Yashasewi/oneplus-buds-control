@@ -3,12 +3,12 @@ import Observation
 import SwiftUI
 
 enum AppInfo {
-  static let repository = URL(string: "https://github.com/Yashasewi/oneplus-buds-control")!
+  static let repository = URL(string: "https://github.com/Yashasewi/openbuds")!
   static let website = URL(string: "https://openbuds.yashasewi.me")!
-  static let issues = URL(string: "https://github.com/Yashasewi/oneplus-buds-control/issues/new/choose")!
-  static let releases = URL(string: "https://github.com/Yashasewi/oneplus-buds-control/releases")!
-  static let download = URL(string: "https://github.com/Yashasewi/oneplus-buds-control/releases/latest/download/OpenBuds.dmg")!
-  static let latestAPI = URL(string: "https://api.github.com/repos/Yashasewi/oneplus-buds-control/releases/latest")!
+  static let issues = URL(string: "https://github.com/Yashasewi/openbuds/issues/new/choose")!
+  static let releases = URL(string: "https://github.com/Yashasewi/openbuds/releases")!
+  static let download = URL(string: "https://github.com/Yashasewi/openbuds/releases/latest/download/OpenBuds.dmg")!
+  static let latestAPI = URL(string: "https://api.github.com/repos/Yashasewi/openbuds/releases/latest")!
 
   static var version: String {
     Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2"
@@ -91,7 +91,7 @@ struct AboutPage: View {
       PanelSection { update.padding(.vertical, 9) }
 
       PanelSection {
-        LinkRow(title: "Source code", detail: "github.com/Yashasewi/oneplus-buds-control", url: AppInfo.repository) {
+        LinkRow(title: "Source code", detail: "github.com/Yashasewi/openbuds", url: AppInfo.repository) {
           GitHubBadge()
         }
         Divider()
