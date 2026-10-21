@@ -100,6 +100,13 @@ export function About() {
   const volume = useAction("promptVolume");
   return (
     <Group title="About">
+      <a
+        href="https://github.com/Yashasewi/oneplus-buds-control"
+        className="flex items-center justify-between gap-4 py-3.5 hover:text-tip"
+      >
+        <span className="text-[1rem]">Source on GitHub</span>
+        <span className="text-[0.95rem] text-ink/50">OpenBuds</span>
+      </a>
       {state.promptVolume !== undefined && (
         <Row
           stack
