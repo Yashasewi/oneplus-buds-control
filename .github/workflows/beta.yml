@@ -99,12 +99,12 @@ jobs:
             gh release upload "$TAG" native/.build/OpenBuds.dmg --clobber
           else
             notes="$(mktemp)"
-            cat > "$notes" <<'EOF'
-Beta from the dev branch. The stable download is unchanged.
-
-## Install
-Open the disk image and drag OpenBuds to Applications. macOS says it could not verify the app, because this build is ad-hoc signed and not notarized. Click Done, then System Settings, Privacy and Security, Open Anyway.
-EOF
+            printf '%s\n' \
+              'Beta from the dev branch. The stable download is unchanged.' \
+              '' \
+              '## Install' \
+              'Open the disk image and drag OpenBuds to Applications. macOS says it could not verify the app, because this build is ad-hoc signed and not notarized. Click Done, then System Settings, Privacy and Security, Open Anyway.' \
+              > "$notes"
             args=(
               --target "$sha"
               --prerelease

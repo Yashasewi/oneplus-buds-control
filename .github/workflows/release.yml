@@ -62,10 +62,10 @@ jobs:
           else
             start="$(gh release list --limit 30 --json tagName,isPrerelease --jq '[.[] | select(.isPrerelease|not)][0].tagName // ""')"
             notes="$(mktemp)"
-            cat > "$notes" <<'EOF'
-## Install
-Open the disk image and drag OpenBuds to Applications. macOS says it could not verify the app, because this build is ad-hoc signed and not notarized. Click Done, then System Settings, Privacy and Security, Open Anyway.
-EOF
+            printf '%s\n' \
+              '## Install' \
+              'Open the disk image and drag OpenBuds to Applications. macOS says it could not verify the app, because this build is ad-hoc signed and not notarized. Click Done, then System Settings, Privacy and Security, Open Anyway.' \
+              > "$notes"
             args=(--generate-notes --notes-file "$notes" --title "OpenBuds $tag")
             if [ -n "$start" ]; then
               args+=(--notes-start-tag "$start")
