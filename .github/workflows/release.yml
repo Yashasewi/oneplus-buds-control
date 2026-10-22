@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: release-main
@@ -56,15 +57,18 @@ jobs:
           short="$(plutil -extract CFBundleShortVersionString raw native/.build/OpenBuds.app/Contents/Info.plist)"
           build="$(git rev-list --count HEAD)"
           tag="v${short}.${build}"
-          notes="$(git log -1 --pretty=%B)"
-          notes="${notes}
-
-          ## Install
-          Open the disk image and drag OpenBuds to Applications. macOS says it could not verify the app, because this build is ad-hoc signed and not notarized. Click Done, then System Settings, Privacy and Security, Open Anyway."
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" native/.build/OpenBuds.dmg --clobber
           else
-            gh release create "$tag" native/.build/OpenBuds.dmg \
-              --title "OpenBuds $tag" \
-              --notes "$notes"
+            start="$(gh release list --limit 30 --json tagName,isPrerelease --jq '[.[] | select(.isPrerelease|not)][0].tagName // ""')"
+            notes="$(mktemp)"
+            cat > "$notes" <<'EOF'
+## Install
+Open the disk image and drag OpenBuds to Applications. macOS says it could not verify the app, because this build is ad-hoc signed and not notarized. Click Done, then System Settings, Privacy and Security, Open Anyway.
+EOF
+            args=(--generate-notes --notes-file "$notes" --title "OpenBuds $tag")
+            if [ -n "$start" ]; then
+              args+=(--notes-start-tag "$start")
+            fi
+            gh release create "$tag" native/.build/OpenBuds.dmg "${args[@]}"
           fi

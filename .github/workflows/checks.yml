@@ -46,11 +46,15 @@ jobs:
           npm install --global pnpm@12.14.0
           pnpm install --frozen-lockfile
 
-      - name: Format
-        run: pnpm exec vp fmt --check src index.html
+      - parallel:
+          - name: Format
+            working-directory: app
+            run: pnpm exec vp fmt --check src index.html
 
-      - name: Lint
-        run: pnpm exec vp lint --deny-warnings
+          - name: Lint
+            working-directory: app
+            run: pnpm exec vp lint --deny-warnings
 
-      - name: Build
-        run: pnpm run build
+          - name: Build
+            working-directory: app
+            run: pnpm run build
