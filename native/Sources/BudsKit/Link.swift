@@ -9,6 +9,7 @@ final class RFCOMMLink: NSObject {
   var onClose: () -> Void = {}
   private var channel: IOBluetoothRFCOMMChannel?
   private var openContinuation: CheckedContinuation<Void, Error>?
+  private var openAttempt = 0
   private var sdpContinuation: CheckedContinuation<IOReturn, Never>?
 
   static let uuid: IOBluetoothSDPUUID = budsServiceUUID.withUnsafeBytes {
@@ -38,13 +39,19 @@ final class RFCOMMLink: NSObject {
 
   func open(_ device: IOBluetoothDevice, channel id: BluetoothRFCOMMChannelID) async throws {
     var opened: IOBluetoothRFCOMMChannel?
+    openAttempt += 1
+    let attempt = openAttempt
     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
       openContinuation = continuation
       let status = device.openRFCOMMChannelAsync(&opened, withChannelID: id, delegate: self)
       channel = opened
       if status != kIOReturnSuccess { finishOpen(.failure(LinkError.openFailed(status))) }
+      // When another process on this Mac holds the channel, bluetoothd refuses it at once but never calls back.
       DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-        MainActor.assumeIsolated { self.finishOpen(.failure(LinkError.openTimedOut)) }
+        MainActor.assumeIsolated {
+          guard attempt == self.openAttempt else { return }
+          self.finishOpen(.failure(LinkError.openTimedOut))
+        }
       }
     }
   }
@@ -116,7 +123,7 @@ enum LinkError: LocalizedError {
   var errorDescription: String? {
     switch self {
     case .openFailed, .openTimedOut:
-      "Couldn’t open the earbuds’ control link. If Chrome or another app is connected to them, disconnect it there."
+      "Another app or browser tab on this Mac may be using the earbuds. Close it there; OpenBuds keeps trying and connects by itself. If this keeps happening, turn Bluetooth off and on."
     case .writeFailed(let s): "Couldn’t send to the earbuds (\(String(format: "0x%08x", s)))."
     }
   }

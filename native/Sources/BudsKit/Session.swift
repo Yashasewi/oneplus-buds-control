@@ -65,6 +65,7 @@ public final class BudsSession {
   @ObservationIgnored private var userDisconnected = false
   @ObservationIgnored private var connecting = false
   @ObservationIgnored private var batteryTimer: DispatchWorkItem?
+  @ObservationIgnored private var retryTimer: DispatchWorkItem?
   @ObservationIgnored private var subscribed: [UInt8] = []
   @ObservationIgnored private var fitWaiter: CheckedContinuation<FitResult, Error>?
   @ObservationIgnored private var statusTimers: [String: DispatchWorkItem] = [:]
@@ -77,7 +78,10 @@ public final class BudsSession {
       // Give the buds a moment to bring up their services after the baseband connects.
       DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { MainActor.assumeIsolated { self.autoConnect() } }
     }
-    watcher.onDisconnect = { [weak self] _ in self?.closed(reason: "They reconnect by themselves when you take them out of the case.") }
+    watcher.onDisconnect = { [weak self] _ in
+      self?.retryTimer?.cancel()
+      self?.closed(reason: "They reconnect by themselves when you take them out of the case.")
+    }
   }
 
   public func start() {
@@ -91,8 +95,14 @@ public final class BudsSession {
   }
 
   public func connect() async {
-    guard !isConnected, !connecting else { return }
     userDisconnected = false
+    await attempt(retrying: false)
+  }
+
+  /// A retry keeps the last error on screen instead of flashing "Connecting" every few seconds.
+  private func attempt(retrying: Bool) async {
+    guard !isConnected, !connecting, !userDisconnected else { return }
+    retryTimer?.cancel()
     guard let target = RFCOMMLink.candidates().first(where: { $0.isConnected() }) else {
       connection = .unavailable("Connect your OnePlus Buds 4 to this Mac in Bluetooth settings.")
       return
@@ -100,7 +110,7 @@ public final class BudsSession {
     connecting = true
     defer { connecting = false }
     let name = target.name ?? "OnePlus Buds 4"
-    connection = .connecting(name)
+    if !retrying { connection = .connecting(name) }
     lastError = nil
     do {
       guard let id = await link.channelID(on: target) else {
@@ -121,11 +131,27 @@ public final class BudsSession {
       link.close()
       failPending()
       connection = .unavailable(error.localizedDescription)
+      // The buds allow one control link per Mac. A browser tab can hold it and let go later
+      // without the buds disconnecting, so nothing else would prompt another attempt.
+      if error is LinkError { scheduleRetry() }
     }
+  }
+
+  private func scheduleRetry() {
+    retryTimer?.cancel()
+    let work = DispatchWorkItem { [weak self] in
+      MainActor.assumeIsolated {
+        guard let self else { return }
+        Task { await self.attempt(retrying: true) }
+      }
+    }
+    retryTimer = work
+    DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: work)
   }
 
   public func disconnect() {
     userDisconnected = true
+    retryTimer?.cancel()
     link.close()
     closed(reason: "You disconnected them. Click Connect to reconnect.")
   }
