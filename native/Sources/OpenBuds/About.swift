@@ -9,6 +9,16 @@ enum AppInfo {
   static let releases = URL(string: "https://github.com/Yashasewi/openbuds/releases")!
   static let download = URL(string: "https://github.com/Yashasewi/openbuds/releases/latest/download/OpenBuds.dmg")!
   static let latestAPI = URL(string: "https://api.github.com/repos/Yashasewi/openbuds/releases/latest")!
+  static let releasesAPI = URL(string: "https://api.github.com/repos/Yashasewi/openbuds/releases?per_page=30")!
+
+  /// Set only by the beta packaging step. Stable builds leave the key unset.
+  static var isBeta: Bool {
+    switch Bundle.main.object(forInfoDictionaryKey: "OpenBudsBeta") {
+    case let value as Bool: return value
+    case let value as NSNumber: return value.boolValue
+    default: return false
+    }
+  }
 
   static var version: String {
     Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2"
@@ -22,13 +32,20 @@ enum AppInfo {
   static var tag: String { "v\(version).\(build)" }
 }
 
+struct UpdateOffer: Equatable {
+  var tag: String
+  var download: URL
+  var beta: Bool
+}
+
 /// Asks GitHub for the newest release. Runs only when the About page opens.
+/// Stable builds look at the latest full release. Beta builds also consider prereleases.
 @MainActor
 @Observable
 final class UpdateChecker {
   enum State: Equatable {
     case idle, checking, current
-    case available(String)
+    case available(UpdateOffer)
     case failed
   }
 
@@ -40,18 +57,58 @@ final class UpdateChecker {
     if let checkedAt, Date().timeIntervalSince(checkedAt) < 600, state != .failed { return }
     state = .checking
     do {
-      var request = URLRequest(url: AppInfo.latestAPI, timeoutInterval: 10)
-      request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-      let (data, _) = try await URLSession.shared.data(for: request)
-      let latest = try JSONDecoder().decode(Release.self, from: data).tag_name
+      let data = try await Self.fetch(AppInfo.isBeta ? AppInfo.releasesAPI : AppInfo.latestAPI)
       checkedAt = Date()
-      state = Self.isNewer(latest, than: AppInfo.tag) ? .available(latest) : .current
+      let offer = try AppInfo.isBeta ? Self.bestBeta(in: data) : Self.latestStable(in: data)
+      state = offer.map { .available($0) } ?? .current
     } catch {
       state = .failed
     }
   }
 
-  private struct Release: Decodable { let tag_name: String }
+  private static func fetch(_ url: URL) async throws -> Data {
+    var request = URLRequest(url: url, timeoutInterval: 10)
+    request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+    let (data, response) = try await URLSession.shared.data(for: request)
+    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+      throw URLError(.badServerResponse)
+    }
+    return data
+  }
+
+  private static func latestStable(in data: Data) throws -> UpdateOffer? {
+    let release = try JSONDecoder().decode(Release.self, from: data)
+    guard isNewer(release.tag_name, than: AppInfo.tag) else { return nil }
+    return release.offer
+  }
+
+  /// The higher of a newer prerelease and a newer full release.
+  private static func bestBeta(in data: Data) throws -> UpdateOffer? {
+    let releases = try JSONDecoder().decode([Release].self, from: data)
+    return releases.reduce(nil) { best, release in
+      guard isNewer(release.tag_name, than: AppInfo.tag), let offer = release.offer else { return best }
+      guard let best else { return offer }
+      return isNewer(offer.tag, than: best.tag) ? offer : best
+    }
+  }
+
+  private struct Release: Decodable {
+    let tag_name: String
+    let prerelease: Bool?
+    let assets: [Asset]?
+
+    struct Asset: Decodable {
+      let name: String
+      let browser_download_url: String
+    }
+
+    var offer: UpdateOffer? {
+      let raw = assets?.first { $0.name == "OpenBuds.dmg" }?.browser_download_url
+      let fallback = "https://github.com/Yashasewi/openbuds/releases/download/\(tag_name)/OpenBuds.dmg"
+      guard let download = URL(string: raw ?? fallback) else { return nil }
+      return UpdateOffer(tag: tag_name, download: download, beta: prerelease == true)
+    }
+  }
 
   static func isNewer(_ tag: String, than current: String) -> Bool {
     func parts(_ s: String) -> [Int] {
@@ -76,7 +133,9 @@ struct AboutPage: View {
           .resizable()
           .frame(width: 64, height: 64)
         Text("OpenBuds").font(.title3.weight(.semibold))
-        Text("Version \(AppInfo.version) (\(AppInfo.build))")
+        Text(AppInfo.isBeta
+          ? "Version \(AppInfo.version) (\(AppInfo.build)) Beta"
+          : "Version \(AppInfo.version) (\(AppInfo.build))")
           .font(.caption)
           .foregroundStyle(.secondary)
           .textSelection(.enabled)
@@ -128,17 +187,19 @@ struct AboutPage: View {
         IconBadge(icon: "checkmark", color: .green)
         VStack(alignment: .leading, spacing: 1) {
           Text("You’re up to date")
-          Text("\(AppInfo.tag) is the latest release.").font(.caption).foregroundStyle(.secondary)
+          Text(AppInfo.isBeta ? "\(AppInfo.tag) is the latest beta." : "\(AppInfo.tag) is the latest release.")
+            .font(.caption).foregroundStyle(.secondary)
         }
         Spacer(minLength: 0)
-      case .available(let tag):
+      case .available(let offer):
         IconBadge(icon: "arrow.down", color: .blue)
         VStack(alignment: .leading, spacing: 1) {
           Text("Update available")
-          Text("\(tag) is ready to download.").font(.caption).foregroundStyle(.secondary)
+          Text(offer.beta ? "\(offer.tag) beta is ready to download." : "\(offer.tag) is ready to download.")
+            .font(.caption).foregroundStyle(.secondary)
         }
         Spacer(minLength: 8)
-        Button("Download") { NSWorkspace.shared.open(AppInfo.download) }
+        Button("Download") { NSWorkspace.shared.open(offer.download) }
           .buttonStyle(.glassProminent)
           .controlSize(.small)
       case .failed:
