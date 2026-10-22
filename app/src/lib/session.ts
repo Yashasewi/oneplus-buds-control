@@ -213,7 +213,7 @@ export class BudsSession {
             : {
                 connection: "disconnected",
                 reason:
-                  "Couldn’t reach the earbuds. Check they are connected to this Mac in Bluetooth settings, then try again.",
+                  "Couldn’t reach the earbuds. Check they are connected in Bluetooth settings, and close the OpenBuds Mac app or any other tab using them, then try again. If this keeps happening, turn Bluetooth off and on.",
               },
         );
       throw error;
