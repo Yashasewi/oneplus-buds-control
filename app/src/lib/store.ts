@@ -19,9 +19,14 @@ export function disconnect() {
   userDisconnected = true;
   void session.close("You disconnected.");
 }
+// The earbuds take one control link per computer. A hidden tab that holds it locks out the Mac app
+// and other tabs, so connect on our own only while visible, and let go after a while in the background.
+const RELEASE_HIDDEN_AFTER = 30000;
+let releaseTimer: ReturnType<typeof setTimeout> | undefined;
 async function autoConnect() {
   const { connection } = session.snapshot;
   if (
+    document.visibilityState !== "visible" ||
     userDisconnected ||
     session.connected ||
     connection === "connecting" ||
@@ -38,6 +43,21 @@ function rereadOnReturn() {
   if (Date.now() - session.lastRefresh < 15000) return;
   void session.refresh().catch(() => {});
 }
+function releaseWhenHidden() {
+  clearTimeout(releaseTimer);
+  if (document.visibilityState === "visible") return void autoConnect();
+  releaseTimer = setTimeout(() => {
+    if (document.visibilityState === "visible") return;
+    const { connection } = session.snapshot;
+    // Let a pending change or an earbud restart finish, then check again.
+    if (action.phase === "pending" || connection === "connecting" || connection === "restarting")
+      return releaseWhenHidden();
+    if (connection !== "connected") return;
+    void session.close(
+      "Paused while this tab was in the background, so other apps can use your earbuds.",
+    );
+  }, RELEASE_HIDDEN_AFTER);
+}
 let started = false;
 export function startBackground() {
   if (started) return;
@@ -45,7 +65,11 @@ export function startBackground() {
   void autoConnect();
   navigator.serial?.addEventListener("connect", () => void autoConnect());
   document.addEventListener("visibilitychange", rereadOnReturn);
+  document.addEventListener("visibilitychange", releaseWhenHidden);
   window.addEventListener("focus", rereadOnReturn);
+  window.addEventListener("pagehide", () => {
+    if (session.connected) void session.close("This tab closed.");
+  });
 }
 
 // One change at a time: a write and its read-back must not interleave with another write.

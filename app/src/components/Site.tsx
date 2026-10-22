@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { ISSUES, MAC_DMG, RELEASES, REPO, latestRelease, type Release } from "../lib/links";
+import {
+  ISSUES,
+  MAC_DMG,
+  RELEASES,
+  REPO,
+  isNewerTag,
+  latestBeta,
+  latestRelease,
+  type Release,
+} from "../lib/links";
 import { cx } from "./ui";
 
 export function GitHubMark({ className }: { className?: string }) {
@@ -30,14 +39,31 @@ function DownloadIcon({ className }: { className?: string }) {
 
 function useRelease() {
   const [release, setRelease] = useState<Release>();
+  const [settled, setSettled] = useState(false);
   useEffect(() => {
     let live = true;
-    void latestRelease().then((r) => live && setRelease(r));
+    void latestRelease().then((next) => {
+      if (!live) return;
+      setRelease(next);
+      setSettled(true);
+    });
     return () => {
       live = false;
     };
   }, []);
-  return release;
+  return { release, settled };
+}
+
+function useBeta() {
+  const [beta, setBeta] = useState<Release>();
+  useEffect(() => {
+    let live = true;
+    void latestBeta().then((r) => live && setBeta(r));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return beta;
 }
 
 const megabytes = (bytes: number) => `${(bytes / 1_048_576).toFixed(1)} MB`;
@@ -45,7 +71,7 @@ const shortDate = (date: Date) =>
   date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 export function SiteHeader() {
-  const release = useRelease();
+  const { release } = useRelease();
   return (
     <header className="mx-auto flex max-w-[80rem] items-center justify-between gap-4 px-5 pt-5 sm:px-8 lg:px-12">
       <a href="/" className="flex items-center gap-2.5 rounded-lg">
@@ -76,7 +102,9 @@ export function SiteHeader() {
 }
 
 export function MacDownload({ compact }: { compact?: boolean }) {
-  const release = useRelease();
+  const { release, settled } = useRelease();
+  const beta = useBeta();
+  const showBeta = settled && Boolean(beta && (!release || isNewerTag(beta.tag, release.tag)));
   const meta = [
     release?.tag,
     release && shortDate(release.date),
@@ -122,6 +150,15 @@ export function MacDownload({ compact }: { compact?: boolean }) {
               <GitHubMark className="size-4" />
               Release notes
             </a>
+            {showBeta && beta && (
+              <a
+                href={beta.download}
+                className="inline-flex h-11 items-center rounded-xl px-3 text-[0.92rem] text-ink/55 transition-colors hover:text-tip"
+              >
+                Download beta
+                <span className="ml-1.5 tabular-nums text-ink/40">{beta.tag}</span>
+              </a>
+            )}
           </div>
         </div>
       </div>
