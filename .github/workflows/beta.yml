@@ -2,8 +2,8 @@ name: Beta
 
 on:
   schedule:
-    # 08:00 IST. GitHub runs this from main; the job checks out dev.
-    - cron: "30 2 * * *"
+    # 08:00 IST every other day. GitHub runs this from main; the job checks out dev.
+    - cron: "30 2 */2 * *"
   workflow_dispatch:
 
 permissions:
